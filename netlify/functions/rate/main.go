@@ -11,6 +11,7 @@ import (
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	_ "github.com/go-sql-driver/mysql"
 )
 
 type CryptoInfo struct {
@@ -32,10 +33,10 @@ func rateHandler(ctx context.Context, request events.APIGatewayProxyRequest) (ev
 	defer db.Close()
 
 	// Prepare the SQL query with placeholders
-	query := "SELECT name, rate FROM cryptoinfo WHERE name = ? AND fiat = ? ORDER BY id DESC LIMIT 1"
+	query := "SELECT name, rate FROM cryptoinfo WHERE name = ? ORDER BY id DESC LIMIT 1"
 
 	// Execute the parameterized query with user input
-	row := db.QueryRow(query, crypto, fiat)
+	row := db.QueryRow(query, fiat)
 
 	var cryptoInfo CryptoInfo
 	err = row.Scan(&cryptoInfo.Name, &cryptoInfo.Rate)
