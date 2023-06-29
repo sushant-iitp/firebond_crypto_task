@@ -15,9 +15,8 @@ import (
 )
 
 type CryptoInfo struct {
-	Crypto string  `json:"Crypto"`
-	Name   string  `json:"Fiat"`
-	Rate   float64 `json:"Rate"`
+	Name string  `json:"Fiat"`
+	Rate float64 `json:"Rate"`
 }
 
 func rateHandler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
