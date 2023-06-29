@@ -31,7 +31,7 @@ func rateHandler(ctx context.Context, request events.APIGatewayProxyRequest) (ev
 	defer db.Close()
 
 	// Prepare the SQL query with placeholders
-	query := "SELECT name, rate FROM cryptoinfo  ORDER BY id ESC LIMIT 1"
+	query := "SELECT name, rate FROM cryptoinfo  ORDER BY id DESC LIMIT 1"
 
 	// Execute the parameterized query with user input
 	row := db.QueryRow(query)
