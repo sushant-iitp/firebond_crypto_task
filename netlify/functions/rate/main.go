@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -21,8 +20,8 @@ type CryptoInfo struct {
 
 func rateHandler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	// Extract the cryptocurrency and fiat parameters from the request path parameters
-	pathParameters := request.PathParameters
-	fiat := strings.ToUpper(pathParameters["fiat"])
+	// pathParameters := request.PathParameters
+	// fiat := strings.ToUpper(pathParameters["fiat"])
 
 	// Connect to the MySQL database
 	db, err := sql.Open("mysql", os.Getenv("DB_USER")+":"+os.Getenv("DB_PASSWORD")+"@tcp("+os.Getenv("DB_HOST")+":"+os.Getenv("DB_PORT")+")/"+os.Getenv("DB_DATABASE"))
@@ -32,10 +31,10 @@ func rateHandler(ctx context.Context, request events.APIGatewayProxyRequest) (ev
 	defer db.Close()
 
 	// Prepare the SQL query with placeholders
-	query := "SELECT name, rate FROM cryptoinfo WHERE name = ? ORDER BY id DESC LIMIT 1"
+	query := "SELECT name, rate FROM cryptoinfo  ORDER BY id ESC LIMIT 1"
 
 	// Execute the parameterized query with user input
-	row := db.QueryRow(query, fiat)
+	row := db.QueryRow(query)
 
 	var cryptoInfo CryptoInfo
 	err = row.Scan(&cryptoInfo.Name, &cryptoInfo.Rate)
