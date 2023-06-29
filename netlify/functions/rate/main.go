@@ -15,14 +15,14 @@ import (
 )
 
 type CryptoInfo struct {
-	Name string  `json:"Name"`
-	Rate float64 `json:"Rate"`
+	Crypto string  `json:"Crypto"`
+	Name   string  `json:"Fiat"`
+	Rate   float64 `json:"Rate"`
 }
 
 func rateHandler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	// Extract the cryptocurrency and fiat parameters from the request path parameters
 	pathParameters := request.PathParameters
-	crypto := strings.ToUpper(pathParameters["crypto"])
 	fiat := strings.ToUpper(pathParameters["fiat"])
 
 	// Connect to the MySQL database
