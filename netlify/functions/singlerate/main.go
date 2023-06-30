@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -16,8 +17,12 @@ type CryptoResponse struct {
 }
 
 func GetSingleRate(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	crypto := request.PathParameters["crypto"]
-	fiat := request.PathParameters["fiat"]
+	pathParams := strings.Split(request.URL.Path, "/")
+	crypto := pathParams[len(pathParams)-2]
+	fiat := pathParams[len(pathParams)-1]
+
+	fmt.Println("Crypto:", crypto)
+	fmt.Println("Fiat:", fiat)
 
 	apiURL := fmt.Sprintf("https://min-api.cryptocompare.com/data/price?fsym=%s&tsyms=%s", crypto, fiat)
 
