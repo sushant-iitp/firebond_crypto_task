@@ -12,7 +12,7 @@ import (
 
 type CryptoResponse struct {
 	Fiat  string      `json:"fiat"`
-	Value json.Number `json:"value"`
+	Value interface{} `json:"value"`
 }
 
 func GetSingleRate(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
@@ -31,7 +31,7 @@ func GetSingleRate(ctx context.Context, request events.APIGatewayProxyRequest) (
 		return events.APIGatewayProxyResponse{StatusCode: http.StatusBadGateway}, fmt.Errorf("API request failed with status: %d", resp.StatusCode)
 	}
 
-	var data map[string]json.Number
+	var data map[string]interface{}
 	err = json.NewDecoder(resp.Body).Decode(&data)
 	if err != nil {
 		return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
