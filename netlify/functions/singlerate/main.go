@@ -11,10 +11,7 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 )
 
-type CryptoResponse struct {
-	Fiat  string      `json:"fiat"`
-	Value interface{} `json:"value"`
-}
+type CryptoResponse map[string]float64
 
 func GetSingleRate(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	pathParams := strings.Split(request.Path, "/")
@@ -36,20 +33,19 @@ func GetSingleRate(ctx context.Context, request events.APIGatewayProxyRequest) (
 		return events.APIGatewayProxyResponse{StatusCode: http.StatusBadGateway}, fmt.Errorf("API request failed with status: %d", resp.StatusCode)
 	}
 
-	var data map[string]interface{}
+	var data map[string]float64
 	err = json.NewDecoder(resp.Body).Decode(&data)
 	if err != nil {
 		return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
 	}
 
-	value, ok := data[fiat].(float64)
+	value, ok := data[fiat]
 	if !ok {
 		return events.APIGatewayProxyResponse{StatusCode: http.StatusNotFound}, fmt.Errorf("Exchange rate not found for %s", fiat)
 	}
 
 	response := CryptoResponse{
-		Fiat:  fiat,
-		Value: value,
+		fiat: value,
 	}
 
 	body, err := json.Marshal(response)
