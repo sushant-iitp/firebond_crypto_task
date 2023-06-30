@@ -17,7 +17,7 @@ type CryptoResponse struct {
 }
 
 func GetSingleRate(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	pathParams := strings.Split(request.URL.Path, "/")
+	pathParams := strings.Split(request.Path, "/")
 	crypto := pathParams[len(pathParams)-2]
 	fiat := pathParams[len(pathParams)-1]
 
@@ -42,7 +42,7 @@ func GetSingleRate(ctx context.Context, request events.APIGatewayProxyRequest) (
 		return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
 	}
 
-	value, ok := data[fiat]
+	value, ok := data[fiat].(float64)
 	if !ok {
 		return events.APIGatewayProxyResponse{StatusCode: http.StatusNotFound}, fmt.Errorf("Exchange rate not found for %s", fiat)
 	}
