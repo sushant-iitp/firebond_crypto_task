@@ -16,7 +16,6 @@ import (
 )
 
 type CryptoResponse struct {
-	Length int     `json:"valuelen"`
 	Crypto string  `json:"cryptocurrency"`
 	Value  float64 `json:"value"`
 	Fiat   string  `json:"fiat"`
@@ -175,7 +174,7 @@ func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (
 	path := request.Path
 	splitPath := strings.Split(path, "/")
 
-	if len(splitPath) > 0 {
+	if len(splitPath) == 6 {
 		// GET /rates/{cryptocurrency}/{fiat}
 		crypto := splitPath[len(splitPath)-2]
 		fiat := splitPath[len(splitPath)-1]
@@ -197,7 +196,6 @@ func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (
 		}
 
 		response := CryptoResponse{
-			Length: len(splitPath),
 			Crypto: crypto,
 			Value:  rate,
 			Fiat:   fiat,
@@ -208,9 +206,9 @@ func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (
 			Headers:    map[string]string{"Content-Type": "application/json"},
 			Body:       string(responseBody),
 		}, nil
-	} else if len(splitPath) == 3 {
+	} else if len(splitPath) == 5 {
 		// GET /rates/{cryptocurrency}
-		crypto := splitPath[2]
+		crypto := splitPath[len(splitPath)-1]
 
 		db, err := NewDatabase()
 		if err != nil {
@@ -235,7 +233,7 @@ func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (
 			Headers:    map[string]string{"Content-Type": "application/json"},
 			Body:       string(responseBody),
 		}, nil
-	} else if len(splitPath) == 2 {
+	} else if len(splitPath) == 4 {
 		// GET /rates
 		db, err := NewDatabase()
 		if err != nil {
@@ -260,10 +258,10 @@ func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (
 			Headers:    map[string]string{"Content-Type": "application/json"},
 			Body:       string(responseBody),
 		}, nil
-	} else if len(splitPath) == 5 {
+	} else if len(splitPath) == 7 {
 		// GET /rates/history/{cryptocurrency}/{fiat}
-		crypto := splitPath[3]
-		fiat := splitPath[4]
+		crypto := splitPath[len(splitPath)-2]
+		fiat := splitPath[len(splitPath)-1]
 
 		db, err := NewDatabase()
 		if err != nil {
