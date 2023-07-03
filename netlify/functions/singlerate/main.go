@@ -54,7 +54,7 @@ func HandleRequest(request events.APIGatewayProxyRequest) (events.APIGatewayProx
 	path := request.Path
 	splitPath := strings.Split(path, "/")
 
-	if len(splitPath) >= 4 && splitPath[1] == "singlerate" {
+	if len(splitPath) >= 4 && splitPath[3] == "singlerate" {
 		if len(splitPath) == 7 && splitPath[4] == "history" {
 			// Endpoint 4: /rate/history/{cryptocurrency}/{fiat}
 			crypto := splitPath[5]
