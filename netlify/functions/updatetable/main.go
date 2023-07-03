@@ -1,5 +1,3 @@
-package main
-
 import (
 	"database/sql"
 	"encoding/json"
@@ -46,11 +44,23 @@ func HandleRequest(request events.APIGatewayProxyRequest) (events.APIGatewayProx
 	}
 	defer db.DB.Close()
 
+	if request.HTTPMethod == http.MethodPost {
+		err := handlePost(request, db)
+		if err != nil {
+			log.Println("Error handling POST request:", err)
+			return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
+		}
+	}
+
+	return events.APIGatewayProxyResponse{StatusCode: http.StatusOK}, nil
+}
+
+func handlePost(request events.APIGatewayProxyRequest, db *Database) error {
 	apiURL := "https://min-api.cryptocompare.com/data/pricemulti?fsyms=BTC,ETH,USDT,BNB,USDC,XRP,ADA,DOGE,LTC,SOL,TRX,DOT,MATIC,BCH,TON,WBTC,DAI,AVAX,SHIB,BUSD&tsyms=CNY,USD,EUR,JPY,GBP,KRW,INR,CAD,HKD,BRL,AUD,TWD,CHF,RUB,MXN,THB,SAR,AED,SGD,VND"
 	response, err := http.Get(apiURL)
 	if err != nil {
 		log.Println("API call failed:", err)
-		return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
+		return err
 	}
 	defer response.Body.Close()
 
@@ -59,20 +69,20 @@ func HandleRequest(request events.APIGatewayProxyRequest) (events.APIGatewayProx
 		err := json.NewDecoder(response.Body).Decode(&apiResp)
 		if err != nil {
 			log.Println("Error decoding API response:", err)
-			return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
+			return err
 		}
 
 		var exchangeRates []ExchangeRate
 		cryptoMappings, err := db.GetCryptoMappings()
 		if err != nil {
 			log.Println("Error fetching crypto mappings:", err)
-			return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
+			return err
 		}
 
 		fiatMappings, err := db.GetFiatMappings()
 		if err != nil {
 			log.Println("Error fetching fiat mappings:", err)
-			return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
+			return err
 		}
 
 		for cryptoSymbol, rates := range apiResp {
@@ -94,14 +104,11 @@ func HandleRequest(request events.APIGatewayProxyRequest) (events.APIGatewayProx
 		err = db.InsertExchangeRates(exchangeRates)
 		if err != nil {
 			log.Println("Error inserting exchange rates:", err)
-			return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
+			return err
 		}
-
-		return events.APIGatewayProxyResponse{StatusCode: http.StatusOK}, nil
 	}
 
-	log.Println("API call failed with status code:", response.StatusCode)
-	return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, fmt.Errorf("API call failed with status code: %d", response.StatusCode)
+	return nil
 }
 
 // NewDatabase creates a new Database instance with a connection pool.
