@@ -12,7 +12,6 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/joho/godotenv"
 )
 
 type Database struct {
@@ -33,11 +32,6 @@ type ErrorResponse struct {
 }
 
 func NewDatabase() (*Database, error) {
-	err := godotenv.Load()
-	if err != nil {
-		return nil, err
-	}
-
 	dbUser := os.Getenv("DB_USER")
 	dbPassword := os.Getenv("DB_PASSWORD")
 	dbHost := os.Getenv("DB_HOST")
@@ -143,10 +137,10 @@ func (d *Database) GetAllExchangeRates() (map[string]map[string]float64, error) 
 func HandleRequest(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	splitPath := strings.Split(request.Path, "/")
 
-	if len(splitPath) == 4 {
+	if len(splitPath) == 6 {
 		// GET /rates/{crypto}/{fiat}
-		crypto := splitPath[2]
-		fiat := splitPath[3]
+		crypto := splitPath[4]
+		fiat := splitPath[5]
 
 		db, err := NewDatabase()
 		if err != nil {
@@ -177,9 +171,9 @@ func HandleRequest(request events.APIGatewayProxyRequest) (events.APIGatewayProx
 			Headers:    map[string]string{"Content-Type": "application/json"},
 			Body:       string(responseBody),
 		}, nil
-	} else if len(splitPath) == 3 && splitPath[2] != "" {
+	} else if len(splitPath) == 5 && splitPath[4] != "" {
 		// GET /rates/{crypto}
-		crypto := splitPath[2]
+		crypto := splitPath[4]
 
 		db, err := NewDatabase()
 		if err != nil {
