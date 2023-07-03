@@ -33,7 +33,7 @@ type ErrorResponse struct {
 
 func (d *Database) CheckCryptoCurrency(crypto string) (bool, error) {
 	var exists bool
-	err := d.DB.QueryRow("SELECT EXISTS (SELECT 1 FROM Cryptocurrencies WHERE symbol = $1)", crypto).Scan(&exists)
+	err := d.DB.QueryRow("SELECT EXISTS (SELECT 1 FROM Cryptocurrencies WHERE symbol = :crypto)", sql.Named("crypto", crypto)).Scan(&exists)
 	if err != nil {
 		return false, err
 	}
@@ -42,7 +42,7 @@ func (d *Database) CheckCryptoCurrency(crypto string) (bool, error) {
 
 func (d *Database) CheckFiatCurrency(fiat string) (bool, error) {
 	var exists bool
-	err := d.DB.QueryRow("SELECT EXISTS (SELECT 1 FROM FiatCurrencies WHERE symbol = $1)", fiat).Scan(&exists)
+	err := d.DB.QueryRow("SELECT EXISTS (SELECT 1 FROM FiatCurrencies WHERE symbol = :fiat)", sql.Named("fiat", fiat)).Scan(&exists)
 	if err != nil {
 		return false, err
 	}
