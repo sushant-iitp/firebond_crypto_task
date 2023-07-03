@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"strings"
+	"regexp"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -13,9 +13,32 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
+func isValidAddress(address string) bool {
+	// Use a regular expression to check if the address matches the Ethereum address format
+	// This is a simple check and may not catch all invalid addresses, but it covers most cases
+	match, _ := regexp.MatchString("^0x[0-9a-fA-F]{40}$", address)
+	return match
+}
+
 func GetBalanceHandler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	// Get the Ethereum address from the path parameter
-	address := strings.TrimPrefix(request.Path, "/.netlify/functions/balance/")
+	address := request.PathParameters["address"]
+
+	// Check if the address is valid
+	if !isValidAddress(address) {
+		response := struct {
+			Message string `json:"message"`
+		}{
+			Message: "Address not valid",
+		}
+
+		jsonResponse, _ := json.Marshal(response)
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusBadRequest,
+			Headers:    map[string]string{"Content-Type": "application/json"},
+			Body:       string(jsonResponse),
+		}, nil
+	}
 
 	// Create an Ethereum client connection
 	client, err := ethclient.Dial("https://mainnet.infura.io/v3/ca40b363703a4b3a8fed56a7eedd774a")
