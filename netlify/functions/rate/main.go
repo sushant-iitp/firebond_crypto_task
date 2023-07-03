@@ -31,6 +31,24 @@ type ErrorResponse struct {
 	Error string `json:"error"`
 }
 
+func (d *Database) CheckCryptoCurrency(crypto string) (bool, error) {
+	var exists bool
+	err := d.DB.QueryRow("SELECT EXISTS (SELECT 1 FROM Cryptocurrencies WHERE crypto = $1)", crypto).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
+}
+
+func (d *Database) CheckFiatCurrency(fiat string) (bool, error) {
+	var exists bool
+	err := d.DB.QueryRow("SELECT EXISTS (SELECT 1 FROM FiatCurrencies WHERE fiat = $1)", fiat).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
+}
+
 func NewDatabase() (*Database, error) {
 	dbUser := os.Getenv("DB_USER")
 	dbPassword := os.Getenv("DB_PASSWORD")
@@ -149,6 +167,36 @@ func HandleRequest(request events.APIGatewayProxyRequest) (events.APIGatewayProx
 		}
 		defer db.Close()
 
+		cryptoExists, err := db.CheckCryptoCurrency(crypto)
+		if err != nil {
+			log.Println("Error checking if crypto currency exists:", err)
+			return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
+		}
+		if !cryptoExists {
+			errorResponse := ErrorResponse{Error: "Crypto currency does not exist or is not servicable"}
+			responseBody, _ := json.Marshal(errorResponse)
+			return events.APIGatewayProxyResponse{
+				StatusCode: http.StatusNotFound,
+				Headers:    map[string]string{"Content-Type": "application/json"},
+				Body:       string(responseBody),
+			}, nil
+		}
+
+		fiatExists, err := db.CheckFiatCurrency(fiat)
+		if err != nil {
+			log.Println("Error checking if fiat currency exists:", err)
+			return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
+		}
+		if !fiatExists {
+			errorResponse := ErrorResponse{Error: "Fiat currency does not exist or is not servicable"}
+			responseBody, _ := json.Marshal(errorResponse)
+			return events.APIGatewayProxyResponse{
+				StatusCode: http.StatusNotFound,
+				Headers:    map[string]string{"Content-Type": "application/json"},
+				Body:       string(responseBody),
+			}, nil
+		}
+
 		rate, err := db.GetExchangeRate(crypto, fiat)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
@@ -181,6 +229,21 @@ func HandleRequest(request events.APIGatewayProxyRequest) (events.APIGatewayProx
 			return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
 		}
 		defer db.Close()
+
+		cryptoExists, err := db.CheckCryptoCurrency(crypto)
+		if err != nil {
+			log.Println("Error checking if crypto currency exists:", err)
+			return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
+		}
+		if !cryptoExists {
+			errorResponse := ErrorResponse{Error: "Crypto currency does not exist or is not servicable"}
+			responseBody, _ := json.Marshal(errorResponse)
+			return events.APIGatewayProxyResponse{
+				StatusCode: http.StatusNotFound,
+				Headers:    map[string]string{"Content-Type": "application/json"},
+				Body:       string(responseBody),
+			}, nil
+		}
 
 		rates, err := db.GetExchangeRatesForCrypto(crypto)
 		if err != nil {
