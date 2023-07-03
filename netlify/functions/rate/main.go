@@ -34,9 +34,8 @@ func NewDatabase() (*Database, error) {
 	username := os.Getenv("DB_USER")
 	database := os.Getenv("DB_DATABASE")
 	password := os.Getenv("DB_PASSWORD")
-	port := os.Getenv("DB_PORT")
 
-	connectionString := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", username, password, host, port, database)
+	connectionString := fmt.Sprintf("%s:%s@tcp(%s)/%s", username, password, host, database)
 	db, err := sql.Open("mysql", connectionString)
 	if err != nil {
 		return nil, err
@@ -175,10 +174,10 @@ func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (
 	path := request.Path
 	splitPath := strings.Split(path, "/")
 
-	if len(splitPath) == 2 {
+	if len(splitPath) == 4 {
 		// GET /rates/{cryptocurrency}/{fiat}
-		crypto := splitPath[1]
-		fiat := splitPath[2]
+		crypto := splitPath[2]
+		fiat := splitPath[3]
 		db, err := NewDatabase()
 		if err != nil {
 			return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
@@ -207,9 +206,9 @@ func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (
 			Headers:    map[string]string{"Content-Type": "application/json"},
 			Body:       string(responseBody),
 		}, nil
-	} else if len(splitPath) == 1 {
+	} else if len(splitPath) == 3 {
 		// GET /rates/{cryptocurrency}
-		crypto := splitPath[1]
+		crypto := splitPath[2]
 
 		db, err := NewDatabase()
 		if err != nil {
@@ -234,7 +233,7 @@ func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (
 			Headers:    map[string]string{"Content-Type": "application/json"},
 			Body:       string(responseBody),
 		}, nil
-	} else if len(splitPath) == 0 {
+	} else if len(splitPath) == 2 {
 		// GET /rates
 		db, err := NewDatabase()
 		if err != nil {
@@ -259,10 +258,10 @@ func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (
 			Headers:    map[string]string{"Content-Type": "application/json"},
 			Body:       string(responseBody),
 		}, nil
-	} else if len(splitPath) == 3 {
+	} else if len(splitPath) == 5 {
 		// GET /rates/history/{cryptocurrency}/{fiat}
-		crypto := splitPath[2]
-		fiat := splitPath[3]
+		crypto := splitPath[3]
+		fiat := splitPath[4]
 
 		db, err := NewDatabase()
 		if err != nil {
