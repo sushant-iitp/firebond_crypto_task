@@ -1,42 +1,55 @@
 package main
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
-	"fmt"
+	"errors"
+	"log"
 	"net/http"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/joho/godotenv"
 )
 
+type Database struct {
+	DB *sql.DB
+}
+
 type CryptoResponse struct {
-	Crypto string  `json:"cryptocurrency"`
-	Value  float64 `json:"value"`
-	Fiat   string  `json:"fiat"`
+	Value float64 `json:"value"`
+}
+
+type CryptoResponseWithTimestamp struct {
+	Value     float64 `json:"value"`
+	Timestamp string  `json:"timestamp"`
 }
 
 type ErrorResponse struct {
 	Error string `json:"error"`
 }
 
-type Database struct {
-	DB *sql.DB
-}
-
 func NewDatabase() (*Database, error) {
-	host := os.Getenv("DB_HOST")
-	username := os.Getenv("DB_USER")
-	database := os.Getenv("DB_DATABASE")
-	password := os.Getenv("DB_PASSWORD")
+	err := godotenv.Load()
+	if err != nil {
+		return nil, err
+	}
 
-	connectionString := fmt.Sprintf("%s:%s@tcp(%s)/%s", username, password, host, database)
-	db, err := sql.Open("mysql", connectionString)
+	dbUser := os.Getenv("DB_USER")
+	dbPassword := os.Getenv("DB_PASSWORD")
+	dbHost := os.Getenv("DB_HOST")
+	dbDatabase := os.Getenv("DB_DATABASE")
+
+	connString := dbUser + ":" + dbPassword + "@tcp(" + dbHost + ")/" + dbDatabase + "?parseTime=true"
+	db, err := sql.Open("mysql", connString)
+	if err != nil {
+		return nil, err
+	}
+
+	err = db.Ping()
 	if err != nil {
 		return nil, err
 	}
@@ -55,16 +68,13 @@ func (d *Database) GetExchangeRate(crypto, fiat string) (float64, error) {
 		JOIN Cryptocurrencies c ON c.cryptocurrency_id = er.cryptocurrency_id
 		JOIN FiatCurrencies f ON f.fiat_currency_id = er.fiat_currency_id
 		WHERE c.symbol = ? AND f.symbol = ?
-		ORDER BY er.timestamp DESC
-		LIMIT 1
 	`
 
+	row := d.DB.QueryRow(query, crypto, fiat)
+
 	var rate float64
-	err := d.DB.QueryRow(query, crypto, fiat).Scan(&rate)
+	err := row.Scan(&rate)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return 0, fmt.Errorf("Invalid Cryptocurrency-FiatCurrency Pair / Pair not servicable")
-		}
 		return 0, err
 	}
 
@@ -101,7 +111,7 @@ func (d *Database) GetExchangeRatesForCrypto(crypto string) (map[string]float64,
 
 func (d *Database) GetAllExchangeRates() (map[string]map[string]float64, error) {
 	query := `
-		SELECT c.symbol AS crypto, f.symbol AS fiat, er.rate
+		SELECT c.symbol, f.symbol, er.rate
 		FROM ExchangeRates er
 		JOIN Cryptocurrencies c ON c.cryptocurrency_id = er.cryptocurrency_id
 		JOIN FiatCurrencies f ON f.fiat_currency_id = er.fiat_currency_id
@@ -121,7 +131,7 @@ func (d *Database) GetAllExchangeRates() (map[string]map[string]float64, error) 
 			return nil, err
 		}
 
-		if _, ok := rates[crypto]; !ok {
+		if rates[crypto] == nil {
 			rates[crypto] = make(map[string]float64)
 		}
 		rates[crypto][fiat] = rate
@@ -130,154 +140,93 @@ func (d *Database) GetAllExchangeRates() (map[string]map[string]float64, error) 
 	return rates, nil
 }
 
-func (d *Database) GetHistoricalExchangeRates(crypto, fiat string) ([]CryptoResponse, error) {
-	query := `
-		SELECT c.symbol AS crypto, f.symbol AS fiat, er.rate
-		FROM ExchangeRates er
-		JOIN Cryptocurrencies c ON c.cryptocurrency_id = er.cryptocurrency_id
-		JOIN FiatCurrencies f ON f.fiat_currency_id = er.fiat_currency_id
-		WHERE c.symbol = ? AND f.symbol = ?
-		AND er.timestamp > ?
-	`
+func HandleRequest(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	splitPath := strings.Split(request.Path, "/")
 
-	startTime := time.Now().Add(-24 * time.Hour)
-	rows, err := d.DB.Query(query, crypto, fiat, startTime)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
+	if len(splitPath) == 4 {
+		// GET /rates/{crypto}/{fiat}
+		crypto := splitPath[2]
+		fiat := splitPath[3]
 
-	var rates []CryptoResponse
-	for rows.Next() {
-		var crypto, fiat string
-		var rate float64
-		if err := rows.Scan(&crypto, &fiat, &rate); err != nil {
-			return nil, err
-		}
-
-		response := CryptoResponse{
-			Crypto: crypto,
-			Value:  rate,
-			Fiat:   fiat,
-		}
-		rates = append(rates, response)
-	}
-
-	return rates, nil
-}
-
-func (d *Database) Ping() error {
-	return d.DB.Ping()
-}
-
-func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	path := request.Path
-	splitPath := strings.Split(path, "/")
-
-	if len(splitPath) == 6 {
-		// GET /rates/{cryptocurrency}/{fiat}
-		crypto := splitPath[len(splitPath)-2]
-		fiat := splitPath[len(splitPath)-1]
 		db, err := NewDatabase()
 		if err != nil {
+			log.Println("Error connecting to the database:", err)
 			return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
 		}
 		defer db.Close()
 
 		rate, err := db.GetExchangeRate(crypto, fiat)
 		if err != nil {
-			errorResponse := ErrorResponse{Error: err.Error()}
-			responseBody, _ := json.Marshal(errorResponse)
-			return events.APIGatewayProxyResponse{
-				StatusCode: http.StatusBadRequest,
-				Headers:    map[string]string{"Content-Type": "application/json"},
-				Body:       string(responseBody),
-			}, nil
+			if errors.Is(err, sql.ErrNoRows) {
+				errorResponse := ErrorResponse{Error: "Exchange rate not found"}
+				responseBody, _ := json.Marshal(errorResponse)
+				return events.APIGatewayProxyResponse{
+					StatusCode: http.StatusNotFound,
+					Headers:    map[string]string{"Content-Type": "application/json"},
+					Body:       string(responseBody),
+				}, nil
+			}
+			log.Println("Error retrieving exchange rate:", err)
+			return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
 		}
 
-		response := CryptoResponse{
-			Crypto: crypto,
-			Value:  rate,
-			Fiat:   fiat,
-		}
+		response := CryptoResponse{Value: rate}
 		responseBody, _ := json.Marshal(response)
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusOK,
 			Headers:    map[string]string{"Content-Type": "application/json"},
 			Body:       string(responseBody),
 		}, nil
-	} else if len(splitPath) == 5 {
-		// GET /rates/{cryptocurrency}
-		crypto := splitPath[len(splitPath)-1]
+	} else if len(splitPath) == 3 && splitPath[2] != "" {
+		// GET /rates/{crypto}
+		crypto := splitPath[2]
 
 		db, err := NewDatabase()
 		if err != nil {
+			log.Println("Error connecting to the database:", err)
 			return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
 		}
 		defer db.Close()
 
 		rates, err := db.GetExchangeRatesForCrypto(crypto)
 		if err != nil {
-			errorResponse := ErrorResponse{Error: err.Error()}
-			responseBody, _ := json.Marshal(errorResponse)
-			return events.APIGatewayProxyResponse{
-				StatusCode: http.StatusBadRequest,
-				Headers:    map[string]string{"Content-Type": "application/json"},
-				Body:       string(responseBody),
-			}, nil
+			if errors.Is(err, sql.ErrNoRows) {
+				errorResponse := ErrorResponse{Error: "Exchange rates not found for the specified cryptocurrency"}
+				responseBody, _ := json.Marshal(errorResponse)
+				return events.APIGatewayProxyResponse{
+					StatusCode: http.StatusNotFound,
+					Headers:    map[string]string{"Content-Type": "application/json"},
+					Body:       string(responseBody),
+				}, nil
+			}
+			log.Println("Error retrieving exchange rates:", err)
+			return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
 		}
 
-		responseBody, _ := json.Marshal(rates)
+		response := make(map[string]float64)
+		for fiat, rate := range rates {
+			response[fiat] = rate
+		}
+
+		responseBody, _ := json.Marshal(response)
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusOK,
 			Headers:    map[string]string{"Content-Type": "application/json"},
 			Body:       string(responseBody),
 		}, nil
-	} else if len(splitPath) == 4 {
+	} else {
 		// GET /rates
 		db, err := NewDatabase()
 		if err != nil {
+			log.Println("Error connecting to the database:", err)
 			return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
 		}
 		defer db.Close()
 
 		rates, err := db.GetAllExchangeRates()
 		if err != nil {
-			errorResponse := ErrorResponse{Error: err.Error()}
-			responseBody, _ := json.Marshal(errorResponse)
-			return events.APIGatewayProxyResponse{
-				StatusCode: http.StatusBadRequest,
-				Headers:    map[string]string{"Content-Type": "application/json"},
-				Body:       string(responseBody),
-			}, nil
-		}
-
-		responseBody, _ := json.Marshal(rates)
-		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusOK,
-			Headers:    map[string]string{"Content-Type": "application/json"},
-			Body:       string(responseBody),
-		}, nil
-	} else if len(splitPath) == 7 {
-		// GET /rates/history/{cryptocurrency}/{fiat}
-		crypto := splitPath[len(splitPath)-2]
-		fiat := splitPath[len(splitPath)-1]
-
-		db, err := NewDatabase()
-		if err != nil {
+			log.Println("Error retrieving exchange rates:", err)
 			return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
-		}
-		defer db.Close()
-
-		rates, err := db.GetHistoricalExchangeRates(crypto, fiat)
-		if err != nil {
-			errorResponse := ErrorResponse{Error: err.Error()}
-			responseBody, _ := json.Marshal(errorResponse)
-			return events.APIGatewayProxyResponse{
-				StatusCode: http.StatusBadRequest,
-				Headers:    map[string]string{"Content-Type": "application/json"},
-				Body:       string(responseBody),
-			}, nil
 		}
 
 		responseBody, _ := json.Marshal(rates)
@@ -287,8 +236,6 @@ func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (
 			Body:       string(responseBody),
 		}, nil
 	}
-
-	return events.APIGatewayProxyResponse{StatusCode: http.StatusNotFound}, nil
 }
 
 func main() {
