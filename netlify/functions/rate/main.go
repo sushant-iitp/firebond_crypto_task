@@ -192,23 +192,14 @@ func HandleRequest(request events.APIGatewayProxyRequest) (events.APIGatewayProx
 	splitPath := strings.Split(request.Path, "/")
 
 	if len(splitPath) > 7 {
-		errorMessage := `Too many parameters. Please try again with valid parameters.
-		Valid URL formats:
-		1. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate
-		2. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/{crypto}
-		3. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/{crypto}/{fiat}
-		4. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/history/{crypto}/{fiat}
+		errorMessage := "Too many parameters. Please try again with valid parameters.\n\nValid URL formats:\n1. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate\n2. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/{crypto}\n3. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/{crypto}/{fiat}\n4. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/history/{crypto}/{fiat}\n\nValid cryptocurrencies: BTC, ETH, USDT, BNB, USDC, XRP, ADA, DOGE, LTC, SOL\nValid fiat currencies: CNY, USD, EUR, JPY, GBP, KRW, INR, CAD, HKD, BRL"
 
-		Valid cryptocurrencies: BTC, ETH, USDT, BNB, USDC, XRP, ADA, DOGE, LTC, SOL
-		Valid fiat currencies: CNY, USD, EUR, JPY, GBP, KRW, INR, CAD, HKD, BRL"`
-
-		errorResponse := ErrorResponse{Error: errorMessage}
-		responseBody, _ := json.Marshal(errorResponse)
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusBadRequest,
-			Headers:    map[string]string{"Content-Type": "application/json"},
-			Body:       string(responseBody),
+			Headers:    map[string]string{"Content-Type": "text/plain"},
+			Body:       errorMessage,
 		}, nil
+
 	} else if len(splitPath) == 6 {
 		// GET /rates/{crypto}/{fiat}
 		crypto := splitPath[4]
