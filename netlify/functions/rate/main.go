@@ -218,12 +218,12 @@ func HandleRequest(request events.APIGatewayProxyRequest) (events.APIGatewayProx
 			return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
 		}
 		if !cryptoExists {
-			errorResponse := ErrorResponse{Error: "Crypto currency does not exist or is not servicable"}
-			responseBody, _ := json.Marshal(errorResponse)
+			errorMessage := "Crypto currency does not exist or is not servicable. Please try again with valid parameters.\n\nValid URL formats:\n1. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate\n2. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/{crypto}\n3. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/{crypto}/{fiat}\n4. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/history/{crypto}/{fiat}\n\nValid cryptocurrencies: BTC, ETH, USDT, BNB, USDC, XRP, ADA, DOGE, LTC, SOL\nValid fiat currencies: CNY, USD, EUR, JPY, GBP, KRW, INR, CAD, HKD, BRL"
+
 			return events.APIGatewayProxyResponse{
-				StatusCode: http.StatusNotFound,
-				Headers:    map[string]string{"Content-Type": "application/json"},
-				Body:       string(responseBody),
+				StatusCode: http.StatusBadRequest,
+				Headers:    map[string]string{"Content-Type": "text/plain"},
+				Body:       errorMessage,
 			}, nil
 		}
 
@@ -233,12 +233,12 @@ func HandleRequest(request events.APIGatewayProxyRequest) (events.APIGatewayProx
 			return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
 		}
 		if !fiatExists {
-			errorResponse := ErrorResponse{Error: "Fiat currency does not exist or is not servicable"}
-			responseBody, _ := json.Marshal(errorResponse)
+			errorMessage := "Fiat currency does not exist or is not servicable. Please try again with valid parameters.\n\nValid URL formats:\n1. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate\n2. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/{crypto}\n3. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/{crypto}/{fiat}\n4. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/history/{crypto}/{fiat}\n\nValid cryptocurrencies: BTC, ETH, USDT, BNB, USDC, XRP, ADA, DOGE, LTC, SOL\nValid fiat currencies: CNY, USD, EUR, JPY, GBP, KRW, INR, CAD, HKD, BRL"
+
 			return events.APIGatewayProxyResponse{
-				StatusCode: http.StatusNotFound,
-				Headers:    map[string]string{"Content-Type": "application/json"},
-				Body:       string(responseBody),
+				StatusCode: http.StatusBadRequest,
+				Headers:    map[string]string{"Content-Type": "text/plain"},
+				Body:       errorMessage,
 			}, nil
 		}
 
@@ -281,12 +281,12 @@ func HandleRequest(request events.APIGatewayProxyRequest) (events.APIGatewayProx
 			return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
 		}
 		if !cryptoExists {
-			errorResponse := ErrorResponse{Error: "Crypto currency does not exist or is not servicable"}
-			responseBody, _ := json.Marshal(errorResponse)
+			errorMessage := "Crypto currency does not exist or is not servicable. Please try again with valid parameters.\n\nValid URL formats:\n1. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate\n2. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/{crypto}\n3. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/{crypto}/{fiat}\n4. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/history/{crypto}/{fiat}\n\nValid cryptocurrencies: BTC, ETH, USDT, BNB, USDC, XRP, ADA, DOGE, LTC, SOL\nValid fiat currencies: CNY, USD, EUR, JPY, GBP, KRW, INR, CAD, HKD, BRL"
+
 			return events.APIGatewayProxyResponse{
-				StatusCode: http.StatusNotFound,
-				Headers:    map[string]string{"Content-Type": "application/json"},
-				Body:       string(responseBody),
+				StatusCode: http.StatusBadRequest,
+				Headers:    map[string]string{"Content-Type": "text/plain"},
+				Body:       errorMessage,
 			}, nil
 		}
 
@@ -334,12 +334,12 @@ func HandleRequest(request events.APIGatewayProxyRequest) (events.APIGatewayProx
 			return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
 		}
 		if !cryptoExists {
-			errorResponse := ErrorResponse{Error: "Crypto currency does not exist or is not serviceable"}
-			responseBody, _ := json.Marshal(errorResponse)
+			errorMessage := "Crypto currency does not exist or is not servicable. Please try again with valid parameters.\n\nValid URL formats:\n1. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate\n2. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/{crypto}\n3. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/{crypto}/{fiat}\n4. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/history/{crypto}/{fiat}\n\nValid cryptocurrencies: BTC, ETH, USDT, BNB, USDC, XRP, ADA, DOGE, LTC, SOL\nValid fiat currencies: CNY, USD, EUR, JPY, GBP, KRW, INR, CAD, HKD, BRL"
+
 			return events.APIGatewayProxyResponse{
-				StatusCode: http.StatusNotFound,
-				Headers:    map[string]string{"Content-Type": "application/json"},
-				Body:       string(responseBody),
+				StatusCode: http.StatusBadRequest,
+				Headers:    map[string]string{"Content-Type": "text/plain"},
+				Body:       errorMessage,
 			}, nil
 		}
 
@@ -349,12 +349,12 @@ func HandleRequest(request events.APIGatewayProxyRequest) (events.APIGatewayProx
 			return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
 		}
 		if !fiatExists {
-			errorResponse := ErrorResponse{Error: "Fiat currency does not exist or is not serviceable"}
-			responseBody, _ := json.Marshal(errorResponse)
+			errorMessage := "Fiat currency does not exist or is not servicable. Please try again with valid parameters.\n\nValid URL formats:\n1. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate\n2. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/{crypto}\n3. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/{crypto}/{fiat}\n4. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/history/{crypto}/{fiat}\n\nValid cryptocurrencies: BTC, ETH, USDT, BNB, USDC, XRP, ADA, DOGE, LTC, SOL\nValid fiat currencies: CNY, USD, EUR, JPY, GBP, KRW, INR, CAD, HKD, BRL"
+
 			return events.APIGatewayProxyResponse{
-				StatusCode: http.StatusNotFound,
-				Headers:    map[string]string{"Content-Type": "application/json"},
-				Body:       string(responseBody),
+				StatusCode: http.StatusBadRequest,
+				Headers:    map[string]string{"Content-Type": "text/plain"},
+				Body:       errorMessage,
 			}, nil
 		}
 
