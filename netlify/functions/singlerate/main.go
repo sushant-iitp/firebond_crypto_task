@@ -114,26 +114,24 @@ func processCryptoFiatRequest(crypto, fiat string) Response {
 	// Check if the given cryptocurrency and fiat currency exist
 	cryptoID, err := getCryptocurrencyID(crypto)
 	if err != nil {
-		return Response{Error: "Invalid Cryptocurrency"}
+		return Response{Error: "Invalid Cryptocurrency/CryptoCurrency Not Supported"}
 	}
 
 	fiatID, err := getFiatCurrencyID(fiat)
 	if err != nil {
-		return Response{Error: "Invalid Fiat Currency"}
+		return Response{Error: "Invalid Fiat Currency/FiatCurrency Not Supported"}
 	}
 
 	// Fetch the exchange rate from the database
-	rate, timestamp, err := getExchangeRate(cryptoID, fiatID)
+	rate, err := getExchangeRate(cryptoID, fiatID)
 	if err != nil {
 		return Response{Error: "Invalid Cryptocurrency - FiatCurrency Pair / Pair not serviceable"}
 	}
 
 	response := Response{
-		Crypto:  crypto,
-		Value:   rate,
-		Fiat:    fiat,
-		Ticker:  map[string]float64{fiat: rate},
-		History: []ExchangeRate{{Rate: rate, Timestamp: timestamp}},
+		Crypto: crypto,
+		Value:  rate,
+		Fiat:   fiat,
 	}
 
 	return response
@@ -227,18 +225,17 @@ func getFiatCurrencyID(symbol string) (int, error) {
 	return id, nil
 }
 
-func getExchangeRate(cryptoID, fiatID int) (float64, string, error) {
-	query := "SELECT rate, timestamp FROM ExchangeRates WHERE cryptocurrency_id = ? AND fiat_currency_id = ? ORDER BY timestamp DESC LIMIT 1"
+func getExchangeRate(cryptoID, fiatID int) (float64, error) {
+	query := "SELECT rate FROM ExchangeRates WHERE cryptocurrency_id = ? AND fiat_currency_id = ? ORDER BY timestamp DESC LIMIT 1"
 	row := db.QueryRow(query, cryptoID, fiatID)
 
 	var rate float64
-	var timestamp string
-	err := row.Scan(&rate, &timestamp)
+	err := row.Scan(&rate)
 	if err != nil {
-		return 0, "", fmt.Errorf("failed to get exchange rate: %v", err)
+		return 0, fmt.Errorf("failed to get exchange rate: %v", err)
 	}
 
-	return rate, timestamp, nil
+	return rate, nil
 }
 
 func getExchangeRatesForCrypto(cryptoID int) (map[string]float64, error) {
