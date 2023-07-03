@@ -19,9 +19,9 @@ type CryptoResponse struct {
 
 func GetCryptoSymbols(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	dbHost := os.Getenv("DB_HOST")
-	dbUsername := os.Getenv("DB_USERNAME")
+	dbUsername := os.Getenv("DB_USER")
 	dbPassword := os.Getenv("DB_PASSWORD")
-	dbName := os.Getenv("DB_NAME")
+	dbName := os.Getenv("DB_DATABASE")
 
 	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s", dbUsername, dbPassword, dbHost, dbName))
 	if err != nil {
