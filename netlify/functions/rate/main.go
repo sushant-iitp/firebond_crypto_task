@@ -191,7 +191,17 @@ func (d *Database) GetHistoricalExchangeRates(crypto, fiat string) ([]CryptoResp
 func HandleRequest(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	splitPath := strings.Split(request.Path, "/")
 
-	if len(splitPath) == 6 {
+	if len(splitPath) > 7 {
+		errorMessage := "Too many parameters. Please try again with valid parameters.\n\nValid URL formats:\n1. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate\n2. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/{crypto}\n3. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/{crypto}/{fiat}\n4. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/history/{crypto}/{fiat}\n\nValid cryptocurrencies: BTC, ETH, USDT, BNB, USDC, XRP, ADA, DOGE, LTC, SOL\nValid fiat currencies: CNY, USD, EUR, JPY, GBP, KRW, INR, CAD, HKD, BRL"
+
+		errorResponse := ErrorResponse{Error: errorMessage}
+		responseBody, _ := json.Marshal(errorResponse)
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusBadRequest,
+			Headers:    map[string]string{"Content-Type": "application/json"},
+			Body:       string(responseBody),
+		}, nil
+	} else if len(splitPath) == 6 {
 		// GET /rates/{crypto}/{fiat}
 		crypto := splitPath[4]
 		fiat := splitPath[5]
