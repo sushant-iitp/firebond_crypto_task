@@ -5,321 +5,261 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	_ "github.com/go-sql-driver/mysql"
 )
 
+// Database connection
 var db *sql.DB
 
-// Cryptocurrency represents the Cryptocurrencies table
-type Cryptocurrency struct {
-	ID     int    `json:"cryptocurrency_id"`
-	Symbol string `json:"symbol"`
+// ApiResponse represents the JSON response format
+type ApiResponse struct {
+	Rate  float64   `json:"rate,omitempty"`
+	Time  time.Time `json:"time,omitempty"`
+	Error string    `json:"error,omitempty"`
 }
 
-// FiatCurrency represents the FiatCurrencies table
-type FiatCurrency struct {
-	ID     int    `json:"fiat_currency_id"`
-	Symbol string `json:"symbol"`
-}
+func init() {
+	// Initialize database connection
+	dbHost := os.Getenv("DB_HOST")
+	dbUser := os.Getenv("DB_USER")
+	dbPassword := os.Getenv("DB_PASSWORD")
+	dbName := os.Getenv("DB_DATABASE")
 
-// ExchangeRate represents the ExchangeRates table
-type ExchangeRate struct {
-	ID               int     `json:"exchange_rate_id"`
-	CryptocurrencyID int     `json:"cryptocurrency_id"`
-	FiatCurrencyID   int     `json:"fiat_currency_id"`
-	Rate             float64 `json:"rate"`
-	Timestamp        string  `json:"timestamp"`
-}
+	connectionString := fmt.Sprintf("%s:%s@tcp(%s)/%s", dbUser, dbPassword, dbHost, dbName)
+	var err error
+	db, err = sql.Open("mysql", connectionString)
+	if err != nil {
+		log.Fatal("Error connecting to the database: ", err)
+	}
 
-// Response represents the response data
-type Response struct {
-	Crypto  string             `json:"cryptocurrency,omitempty"`
-	Value   float64            `json:"value,omitempty"`
-	Fiat    string             `json:"fiat,omitempty"`
-	Ticker  map[string]float64 `json:"ticker,omitempty"`
-	History []ExchangeRate     `json:"history,omitempty"`
-	Error   string             `json:"error,omitempty"`
-}
+	err = db.Ping()
+	if err != nil {
+		log.Fatal("Error pinging the database: ", err)
+	}
 
-// ErrorResponse represents an error response
-type ErrorResponse struct {
-	Error string `json:"error"`
+	log.Println("Connected to the database")
 }
 
 func main() {
 	lambda.Start(HandleRequest)
 }
 
-func HandleRequest(ctx events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	path := ctx.Path
+func HandleRequest(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	path := request.Path
 	splitPath := strings.Split(path, "/")
 
-	if len(splitPath) >= 4 && splitPath[3] == "singlerate" {
-		switch len(splitPath) {
-		case 6:
-			// /rate/{crypto}/{fiat}
+	if len(splitPath) >= 4 && splitPath[1] == "singlerate" {
+		if len(splitPath) == 7 && splitPath[4] == "history" {
+			// Endpoint 4: /rate/history/{cryptocurrency}/{fiat}
+			crypto := splitPath[5]
+			fiat := splitPath[6]
+			response := processHistoricalRequest(crypto, fiat)
+			return createResponse(response), nil
+		} else if len(splitPath) == 6 {
+			// Endpoint 1: /rate/{cryptocurrency}/{fiat}
 			crypto := splitPath[4]
 			fiat := splitPath[5]
 			response := processCryptoFiatRequest(crypto, fiat)
 			return createResponse(response), nil
-		case 5:
-			// /rate/{crypto}
+		} else if len(splitPath) == 5 {
+			// Endpoint 2: /rate/{cryptocurrency}
 			crypto := splitPath[4]
 			response := processCryptoRequest(crypto)
 			return createResponse(response), nil
-		case 4:
-			// /rate
-			response := processRatesRequest()
-			return createResponse(response), nil
-		case 7:
-			// /rate/history/{crypto}/{fiat}
-			if splitPath[4] == "history" {
-				crypto := splitPath[5]
-				fiat := splitPath[6]
-				response := processHistoricalRequest(crypto, fiat)
-				return createResponse(response), nil
-			}
 		}
+	} else if len(splitPath) == 4 && splitPath[3] == "rate" {
+		// Endpoint 3: /rate
+		response := processRatesRequest()
+		return createResponse(response), nil
 	}
 
-	return createErrorResponse("Invalid request: Please modify your request"), nil
+	// Return 404 Not Found for unknown routes
+	return events.APIGatewayProxyResponse{StatusCode: 404}, nil
 }
 
-func createErrorResponse(message string) events.APIGatewayProxyResponse {
-	errorResponse := ErrorResponse{Error: message}
-	responseBody, _ := json.Marshal(errorResponse)
-	return events.APIGatewayProxyResponse{
-		StatusCode: http.StatusBadRequest,
-		Headers:    map[string]string{"Content-Type": "application/json"},
-		Body:       string(responseBody),
-	}
-}
-
-func createResponse(data interface{}) events.APIGatewayProxyResponse {
-	responseBody, _ := json.Marshal(data)
-	return events.APIGatewayProxyResponse{
-		StatusCode: http.StatusOK,
-		Headers:    map[string]string{"Content-Type": "application/json"},
-		Body:       string(responseBody),
-	}
-}
-
-func processCryptoFiatRequest(crypto, fiat string) Response {
-	// Check if the given cryptocurrency and fiat currency exist
-	cryptoID, err := getCryptocurrencyID(crypto)
+func processCryptoFiatRequest(crypto, fiat string) ApiResponse {
+	response := ApiResponse{}
+	cryptoID, err := getCurrencyID("Cryptocurrencies", "symbol", crypto)
 	if err != nil {
-		return Response{Error: "Invalid Cryptocurrency/CryptoCurrency Not Supported"}
+		response.Error = "Invalid Cryptocurrency/CryptoCurrency Not Supported"
+		return response
 	}
 
-	fiatID, err := getFiatCurrencyID(fiat)
+	fiatID, err := getCurrencyID("FiatCurrencies", "symbol", fiat)
 	if err != nil {
-		return Response{Error: "Invalid Fiat Currency/FiatCurrency Not Supported"}
+		response.Error = "Invalid Fiat Currency/FiatCurrency Not Supported"
+		return response
 	}
 
-	// Fetch the exchange rate from the database
-	rate, err := getExchangeRate(cryptoID, fiatID)
-	if err != nil {
-		return Response{Error: "Invalid Cryptocurrency - FiatCurrency Pair / Pair not serviceable"}
-	}
-
-	response := Response{
-		Crypto: crypto,
-		Value:  rate,
-		Fiat:   fiat,
-	}
-
-	return response
-}
-
-func processCryptoRequest(crypto string) Response {
-	// Check if the given cryptocurrency exists
-	cryptoID, err := getCryptocurrencyID(crypto)
-	if err != nil {
-		return Response{Error: "Invalid Cryptocurrency"}
-	}
-
-	// Fetch the exchange rates for the given cryptocurrency
-	rates, err := getExchangeRatesForCrypto(cryptoID)
-	if err != nil {
-		return Response{Error: "Invalid Cryptocurrency"}
-	}
-
-	response := Response{
-		Crypto: crypto,
-		Ticker: rates,
-	}
-
-	return response
-}
-
-func processRatesRequest() Response {
-	// Fetch all exchange rates
-	rates, err := getAllExchangeRates()
-	if err != nil {
-		return Response{Error: "Failed to fetch exchange rates"}
-	}
-
-	response := Response{
-		Ticker: rates,
-	}
-
-	return response
-}
-
-func processHistoricalRequest(crypto, fiat string) Response {
-	// Check if the given cryptocurrency and fiat currency exist
-	cryptoID, err := getCryptocurrencyID(crypto)
-	if err != nil {
-		return Response{Error: "Invalid Cryptocurrency"}
-	}
-
-	fiatID, err := getFiatCurrencyID(fiat)
-	if err != nil {
-		return Response{Error: "Invalid Fiat Currency"}
-	}
-
-	// Fetch the historical exchange rates for the past 24 hours
-	rates, err := getHistoricalExchangeRates(cryptoID, fiatID)
-	if err != nil {
-		return Response{Error: "Invalid Cryptocurrency - FiatCurrency Pair / Pair not serviceable"}
-	}
-
-	response := Response{
-		Crypto:  crypto,
-		Fiat:    fiat,
-		History: rates,
-	}
-
-	return response
-}
-
-func getCryptocurrencyID(symbol string) (int, error) {
-	query := "SELECT cryptocurrency_id FROM Cryptocurrencies WHERE symbol = ?"
-	row := db.QueryRow(query, symbol)
-
-	var id int
-	err := row.Scan(&id)
-	if err != nil {
-		return 0, fmt.Errorf("failed to get cryptocurrency ID: %v", err)
-	}
-
-	return id, nil
-}
-
-func getFiatCurrencyID(symbol string) (int, error) {
-	query := "SELECT fiat_currency_id FROM FiatCurrencies WHERE symbol = ?"
-	row := db.QueryRow(query, symbol)
-
-	var id int
-	err := row.Scan(&id)
-	if err != nil {
-		return 0, fmt.Errorf("failed to get fiat currency ID: %v", err)
-	}
-
-	return id, nil
-}
-
-func getExchangeRate(cryptoID, fiatID int) (float64, error) {
 	query := "SELECT rate FROM ExchangeRates WHERE cryptocurrency_id = ? AND fiat_currency_id = ? ORDER BY timestamp DESC LIMIT 1"
-	row := db.QueryRow(query, cryptoID, fiatID)
-
-	var rate float64
-	err := row.Scan(&rate)
+	err = db.QueryRow(query, cryptoID, fiatID).Scan(&response.Rate)
 	if err != nil {
-		return 0, fmt.Errorf("failed to get exchange rate: %v", err)
+		response.Error = "Error fetching exchange rate"
 	}
 
-	return rate, nil
+	return response
 }
 
-func getExchangeRatesForCrypto(cryptoID int) (map[string]float64, error) {
-	query := "SELECT c.symbol, er.rate FROM ExchangeRates er JOIN FiatCurrencies f ON er.fiat_currency_id = f.fiat_currency_id JOIN Cryptocurrencies c ON er.cryptocurrency_id = c.cryptocurrency_id WHERE c.cryptocurrency_id = ?"
+func processCryptoRequest(crypto string) ApiResponse {
+	response := ApiResponse{}
+	cryptoID, err := getCurrencyID("Cryptocurrencies", "symbol", crypto)
+	if err != nil {
+		response.Error = "Invalid Cryptocurrency"
+		return response
+	}
+
+	query := "SELECT fiat_currency_id, rate FROM ExchangeRates WHERE cryptocurrency_id = ? ORDER BY timestamp DESC"
 	rows, err := db.Query(query, cryptoID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get exchange rates for cryptocurrency: %v", err)
+		response.Error = "Error fetching exchange rates"
+		return response
 	}
 	defer rows.Close()
 
-	rates := make(map[string]float64)
 	for rows.Next() {
-		var symbol string
+		var fiatID int
 		var rate float64
-		err := rows.Scan(&symbol, &rate)
+		err := rows.Scan(&fiatID, &rate)
 		if err != nil {
-			return nil, fmt.Errorf("failed to scan exchange rates for cryptocurrency: %v", err)
+			response.Error = "Error scanning database rows"
+			return response
 		}
-		rates[symbol] = rate
+
+		fiatSymbol, err := getCurrencySymbol("FiatCurrencies", fiatID)
+		if err != nil {
+			response.Error = "Error fetching fiat currency symbol"
+			return response
+		}
+
+		response.Rate = rate
+		response.Time = time.Now()
+		// Print the rate for each fiat currency
+		fmt.Printf("%s: %f\n", fiatSymbol, rate)
 	}
 
-	return rates, nil
+	return response
 }
 
-func getAllExchangeRates() (map[string]float64, error) {
-	query := "SELECT c.symbol, er.rate FROM ExchangeRates er JOIN FiatCurrencies f ON er.fiat_currency_id = f.fiat_currency_id JOIN Cryptocurrencies c ON er.cryptocurrency_id = c.cryptocurrency_id"
+func processRatesRequest() ApiResponse {
+	response := ApiResponse{}
+
+	query := "SELECT cryptocurrency_id, fiat_currency_id, rate FROM ExchangeRates"
 	rows, err := db.Query(query)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get all exchange rates: %v", err)
+		response.Error = "Error fetching exchange rates"
+		return response
 	}
 	defer rows.Close()
 
-	rates := make(map[string]float64)
 	for rows.Next() {
-		var symbol string
+		var cryptoID, fiatID int
 		var rate float64
-		err := rows.Scan(&symbol, &rate)
+		err := rows.Scan(&cryptoID, &fiatID, &rate)
 		if err != nil {
-			return nil, fmt.Errorf("failed to scan all exchange rates: %v", err)
+			response.Error = "Error scanning database rows"
+			return response
 		}
-		rates[symbol] = rate
+
+		cryptoSymbol, err := getCurrencySymbol("Cryptocurrencies", cryptoID)
+		if err != nil {
+			response.Error = "Error fetching cryptocurrency symbol"
+			return response
+		}
+
+		fiatSymbol, err := getCurrencySymbol("FiatCurrencies", fiatID)
+		if err != nil {
+			response.Error = "Error fetching fiat currency symbol"
+			return response
+		}
+
+		fmt.Printf("%s-%s: %f\n", cryptoSymbol, fiatSymbol, rate)
 	}
 
-	return rates, nil
+	return response
 }
 
-func getHistoricalExchangeRates(cryptoID, fiatID int) ([]ExchangeRate, error) {
+func processHistoricalRequest(crypto, fiat string) ApiResponse {
+	response := ApiResponse{}
+
+	if crypto != "history" {
+		response.Error = "Invalid request: Please modify your request"
+		return response
+	}
+
+	cryptoID, err := getCurrencyID("Cryptocurrencies", "symbol", fiat)
+	if err != nil {
+		response.Error = "Invalid Cryptocurrency"
+		return response
+	}
+
+	fiatID, err := getCurrencyID("FiatCurrencies", "symbol", fiat)
+	if err != nil {
+		response.Error = "Invalid Fiat Currency"
+		return response
+	}
+
 	query := "SELECT rate, timestamp FROM ExchangeRates WHERE cryptocurrency_id = ? AND fiat_currency_id = ? AND timestamp >= DATE_SUB(NOW(), INTERVAL 24 HOUR)"
 	rows, err := db.Query(query, cryptoID, fiatID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get historical exchange rates: %v", err)
+		response.Error = "Error fetching historical exchange rates"
+		return response
 	}
 	defer rows.Close()
 
-	var rates []ExchangeRate
 	for rows.Next() {
 		var rate float64
-		var timestamp string
+		var timestamp time.Time
 		err := rows.Scan(&rate, &timestamp)
 		if err != nil {
-			return nil, fmt.Errorf("failed to scan historical exchange rates: %v", err)
+			response.Error = "Error scanning database rows"
+			return response
 		}
-		rates = append(rates, ExchangeRate{Rate: rate, Timestamp: timestamp})
+
+		response.Rate = rate
+		response.Time = timestamp
+		// Print the rate and timestamp for each record
+		fmt.Printf("Rate: %f, Time: %s\n", rate, timestamp)
 	}
 
-	return rates, nil
+	return response
 }
 
-func init() {
-	host := os.Getenv("DB_HOST")
-	user := os.Getenv("DB_USER")
-	password := os.Getenv("DB_PASSWORD")
-	database := os.Getenv("DB_DATABASE")
-
-	connectionString := fmt.Sprintf("%s:%s@tcp(%s)/%s", user, password, host, database)
-
-	var err error
-	db, err = sql.Open("mysql", connectionString)
+func getCurrencyID(table, column, symbol string) (int, error) {
+	query := fmt.Sprintf("SELECT %s FROM %s WHERE symbol = ?", column, table)
+	var id int
+	err := db.QueryRow(query, symbol).Scan(&id)
 	if err != nil {
-		log.Fatal(err)
+		return 0, err
+	}
+	return id, nil
+}
+
+func getCurrencySymbol(table string, id int) (string, error) {
+	query := fmt.Sprintf("SELECT symbol FROM %s WHERE %s_id = ?", table, strings.ToLower(table))
+	var symbol string
+	err := db.QueryRow(query, id).Scan(&symbol)
+	if err != nil {
+		return "", err
+	}
+	return symbol, nil
+}
+
+func createResponse(response ApiResponse) events.APIGatewayProxyResponse {
+	body, err := json.Marshal(response)
+	if err != nil {
+		log.Println("Error marshaling JSON response:", err)
+		return events.APIGatewayProxyResponse{StatusCode: 500}
 	}
 
-	err = db.Ping()
-	if err != nil {
-		log.Fatal(err)
+	return events.APIGatewayProxyResponse{
+		StatusCode: 200,
+		Body:       string(body),
+		Headers:    map[string]string{"Content-Type": "application/json"},
 	}
 }
