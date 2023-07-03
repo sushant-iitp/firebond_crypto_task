@@ -73,7 +73,7 @@ func HandleRequest(request events.APIGatewayProxyRequest) (events.APIGatewayProx
 			response := processCryptoRequest(crypto)
 			return createResponse(response), nil
 		}
-	} else if len(splitPath) == 4 && splitPath[3] == "rate" {
+	} else if len(splitPath) == 4 && splitPath[3] == "singlerate" {
 		// Endpoint 3: /rate
 		response := processRatesRequest()
 		return createResponse(response), nil
