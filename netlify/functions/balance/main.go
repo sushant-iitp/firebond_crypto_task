@@ -15,7 +15,7 @@ import (
 
 func GetBalanceHandler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	// Get the Ethereum address from the path parameter
-	address := strings.TrimPrefix(request.Path, "/balance/")
+	address := strings.TrimPrefix(request.Path, "/.netlify/functions/balance/")
 
 	// Create an Ethereum client connection
 	client, err := ethclient.Dial("https://mainnet.infura.io/v3/ca40b363703a4b3a8fed56a7eedd774a")
