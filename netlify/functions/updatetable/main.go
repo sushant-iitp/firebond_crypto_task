@@ -46,7 +46,7 @@ func HandleRequest(request events.APIGatewayProxyRequest) (events.APIGatewayProx
 	}
 	defer db.DB.Close()
 
-	apiURL := "https://min-api.cryptocompare.com/data/pricemulti?fsyms=BTC,ETH,USDT,BNB,USDC,XRP,ADA,DOGE,LTC,SOL,TRX,DOT,MATIC,BCH,TON,WBTC,DAI,AVAX,SHIB,BUSD&tsyms=CNY,USD,EUR,JPY,GBP,KRW,INR,CAD,HKD,BRL,AUD,TWD,CHF,RUB,MXN,THB,SAR,AED,SGD,VND"
+	apiURL := "https://min-api.cryptocompare.com/data/pricemulti?fsyms=BTC,ETH,USDT,BNB,USDC,XRP,ADA,DOGE,LTC,SOL&tsyms=CNY,USD,EUR,JPY,GBP,KRW,INR,CAD,HKD,BRL"
 	response, err := http.Get(apiURL)
 	if err != nil {
 		log.Println("API call failed:", err)
