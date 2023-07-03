@@ -27,6 +27,10 @@ type CryptoResponseWithTimestamp struct {
 	Timestamp string  `json:"timestamp"`
 }
 
+type HistoricalRateResponse struct {
+	ExchangeRate []CryptoResponseWithTimestamp `json:"exchange_rate"`
+}
+
 type ErrorResponse struct {
 	Error string `json:"error"`
 }
@@ -152,6 +156,38 @@ func (d *Database) GetAllExchangeRates() (map[string]map[string]float64, error) 
 	return rates, nil
 }
 
+func (d *Database) GetHistoricalExchangeRates(crypto, fiat string) ([]CryptoResponseWithTimestamp, error) {
+	query := `
+		SELECT er.rate, er.timestamp
+		FROM ExchangeRates er
+		JOIN Cryptocurrencies c ON c.cryptocurrency_id = er.cryptocurrency_id
+		JOIN FiatCurrencies f ON f.fiat_currency_id = er.fiat_currency_id
+		WHERE c.symbol = ? AND f.symbol = ? AND er.timestamp >= NOW() - INTERVAL 24 HOUR
+	`
+
+	rows, err := d.DB.Query(query, crypto, fiat)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	rates := make([]CryptoResponseWithTimestamp, 0)
+	for rows.Next() {
+		var rate float64
+		var timestamp string
+		if err := rows.Scan(&rate, &timestamp); err != nil {
+			return nil, err
+		}
+		response := CryptoResponseWithTimestamp{
+			Value:     rate,
+			Timestamp: timestamp,
+		}
+		rates = append(rates, response)
+	}
+
+	return rates, nil
+}
+
 func HandleRequest(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	splitPath := strings.Split(request.Path, "/")
 
@@ -265,6 +301,70 @@ func HandleRequest(request events.APIGatewayProxyRequest) (events.APIGatewayProx
 			response[fiat] = rate
 		}
 
+		responseBody, _ := json.Marshal(response)
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusOK,
+			Headers:    map[string]string{"Content-Type": "application/json"},
+			Body:       string(responseBody),
+		}, nil
+	} else if len(splitPath) == 7 && splitPath[4] == "history" && splitPath[5] != "" && splitPath[6] != "" {
+		// GET /rate/history/{crypto}/{fiat}
+		crypto := splitPath[5]
+		fiat := splitPath[6]
+
+		db, err := NewDatabase()
+		if err != nil {
+			log.Println("Error connecting to the database:", err)
+			return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
+		}
+		defer db.Close()
+
+		cryptoExists, err := db.CheckCryptoCurrency(crypto)
+		if err != nil {
+			log.Println("Error checking if crypto currency exists:", err)
+			return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
+		}
+		if !cryptoExists {
+			errorResponse := ErrorResponse{Error: "Crypto currency does not exist or is not serviceable"}
+			responseBody, _ := json.Marshal(errorResponse)
+			return events.APIGatewayProxyResponse{
+				StatusCode: http.StatusNotFound,
+				Headers:    map[string]string{"Content-Type": "application/json"},
+				Body:       string(responseBody),
+			}, nil
+		}
+
+		fiatExists, err := db.CheckFiatCurrency(fiat)
+		if err != nil {
+			log.Println("Error checking if fiat currency exists:", err)
+			return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
+		}
+		if !fiatExists {
+			errorResponse := ErrorResponse{Error: "Fiat currency does not exist or is not serviceable"}
+			responseBody, _ := json.Marshal(errorResponse)
+			return events.APIGatewayProxyResponse{
+				StatusCode: http.StatusNotFound,
+				Headers:    map[string]string{"Content-Type": "application/json"},
+				Body:       string(responseBody),
+			}, nil
+		}
+
+		rates, err := db.GetHistoricalExchangeRates(crypto, fiat)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				errorResponse := ErrorResponse{Error: "Historical exchange rates not found for the specified cryptocurrency and fiat currency"}
+				responseBody, _ := json.Marshal(errorResponse)
+				return events.APIGatewayProxyResponse{
+					StatusCode: http.StatusNotFound,
+					Headers:    map[string]string{"Content-Type": "application/json"},
+					Body:       string(responseBody),
+				}, nil
+			}
+			log.Println("Error retrieving historical exchange rates:", err)
+			return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
+		}
+
+		response := HistoricalRateResponse{ExchangeRate: rates}
 		responseBody, _ := json.Marshal(response)
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusOK,
