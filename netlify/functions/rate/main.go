@@ -174,10 +174,10 @@ func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (
 	path := request.Path
 	splitPath := strings.Split(path, "/")
 
-	if len(splitPath) == 4 {
+	if len(splitPath) > 0 {
 		// GET /rates/{cryptocurrency}/{fiat}
-		crypto := splitPath[2]
-		fiat := splitPath[3]
+		crypto := splitPath[len(splitPath)-2]
+		fiat := splitPath[len(splitPath)-1]
 		db, err := NewDatabase()
 		if err != nil {
 			return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
