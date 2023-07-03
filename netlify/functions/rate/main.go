@@ -16,6 +16,7 @@ import (
 )
 
 type CryptoResponse struct {
+	Length int     `json:"valuelen"`
 	Crypto string  `json:"cryptocurrency"`
 	Value  float64 `json:"value"`
 	Fiat   string  `json:"fiat"`
@@ -196,6 +197,7 @@ func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (
 		}
 
 		response := CryptoResponse{
+			Length: len(splitPath),
 			Crypto: crypto,
 			Value:  rate,
 			Fiat:   fiat,
