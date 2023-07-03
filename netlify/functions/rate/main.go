@@ -31,7 +31,7 @@ type Database struct {
 
 func NewDatabase() (*Database, error) {
 	host := os.Getenv("DB_HOST")
-	username := os.Getenv("DB_USERNAME")
+	username := os.Getenv("DB_USER")
 	database := os.Getenv("DB_DATABASE")
 	password := os.Getenv("DB_PASSWORD")
 	port := os.Getenv("DB_PORT")
