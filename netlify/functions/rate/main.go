@@ -175,10 +175,10 @@ func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (
 	path := request.Path
 	splitPath := strings.Split(path, "/")
 
-	if len(splitPath) == 3 {
+	if len(splitPath) == 2 {
 		// GET /rates/{cryptocurrency}/{fiat}
-		crypto := splitPath[2]
-		fiat := splitPath[3]
+		crypto := splitPath[1]
+		fiat := splitPath[2]
 
 		db, err := NewDatabase()
 		if err != nil {
@@ -208,9 +208,9 @@ func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (
 			Headers:    map[string]string{"Content-Type": "application/json"},
 			Body:       string(responseBody),
 		}, nil
-	} else if len(splitPath) == 2 {
+	} else if len(splitPath) == 1 {
 		// GET /rates/{cryptocurrency}
-		crypto := splitPath[2]
+		crypto := splitPath[1]
 
 		db, err := NewDatabase()
 		if err != nil {
@@ -235,7 +235,7 @@ func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (
 			Headers:    map[string]string{"Content-Type": "application/json"},
 			Body:       string(responseBody),
 		}, nil
-	} else if len(splitPath) == 1 {
+	} else if len(splitPath) == 0 {
 		// GET /rates
 		db, err := NewDatabase()
 		if err != nil {
@@ -260,10 +260,10 @@ func HandleRequest(ctx context.Context, request events.APIGatewayProxyRequest) (
 			Headers:    map[string]string{"Content-Type": "application/json"},
 			Body:       string(responseBody),
 		}, nil
-	} else if len(splitPath) == 4 {
+	} else if len(splitPath) == 3 {
 		// GET /rates/history/{cryptocurrency}/{fiat}
-		crypto := splitPath[3]
-		fiat := splitPath[4]
+		crypto := splitPath[2]
+		fiat := splitPath[3]
 
 		db, err := NewDatabase()
 		if err != nil {
