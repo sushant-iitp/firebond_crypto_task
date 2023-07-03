@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -26,9 +27,10 @@ type CryptoResponse struct {
 
 // ExchangeRate represents the exchange rate data to be inserted into the database
 type ExchangeRate struct {
-	CryptoID int     `json:"cryptocurrency_id"`
-	FiatID   int     `json:"fiat_currency_id"`
-	Rate     float64 `json:"rate"`
+	CryptoID  int       `json:"cryptocurrency_id"`
+	FiatID    int       `json:"fiat_currency_id"`
+	Rate      float64   `json:"rate"`
+	Timestamp time.Time `json:"timestamp"`
 }
 
 // APIResponse represents the response from the API
@@ -75,6 +77,8 @@ func HandleRequest(request events.APIGatewayProxyRequest) (events.APIGatewayProx
 			return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
 		}
 
+		timestamp := time.Now().UTC()
+
 		for cryptoSymbol, rates := range apiResp {
 			cryptoID := cryptoMappings[cryptoSymbol]
 			if cryptoID != 0 {
@@ -82,9 +86,10 @@ func HandleRequest(request events.APIGatewayProxyRequest) (events.APIGatewayProx
 					fiatID := fiatMappings[fiatSymbol]
 					if fiatID != 0 {
 						exchangeRates = append(exchangeRates, ExchangeRate{
-							CryptoID: cryptoID,
-							FiatID:   fiatID,
-							Rate:     rate,
+							CryptoID:  cryptoID,
+							FiatID:    fiatID,
+							Rate:      rate,
+							Timestamp: timestamp,
 						})
 					}
 				}
@@ -178,7 +183,7 @@ func (d *Database) InsertExchangeRates(rates []ExchangeRate) error {
 		return nil
 	}
 
-	query := "INSERT INTO ExchangeRates (cryptocurrency_id, fiat_currency_id, rate) VALUES (?, ?, ?)"
+	query := "INSERT INTO ExchangeRates (cryptocurrency_id, fiat_currency_id, rate, timestamp) VALUES (?, ?, ?, ?)"
 	stmt, err := d.DB.Prepare(query)
 	if err != nil {
 		return err
@@ -186,7 +191,7 @@ func (d *Database) InsertExchangeRates(rates []ExchangeRate) error {
 	defer stmt.Close()
 
 	for _, rate := range rates {
-		_, err := stmt.Exec(rate.CryptoID, rate.FiatID, rate.Rate)
+		_, err := stmt.Exec(rate.CryptoID, rate.FiatID, rate.Rate, rate.Timestamp)
 		if err != nil {
 			return err
 		}
