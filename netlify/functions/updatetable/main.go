@@ -21,7 +21,7 @@ var (
 	dbHost     = os.Getenv("DB_HOST")
 	dbUser     = os.Getenv("DB_USER")
 	dbPassword = os.Getenv("DB_PASSWORD")
-	dbName     = os.Getenv("DB_NAME")
+	dbName     = os.Getenv("DB_DATABASE")
 )
 
 // SymbolIDMapping represents the mapping of symbols to IDs
