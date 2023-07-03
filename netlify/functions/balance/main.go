@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -22,8 +23,7 @@ func isValidAddress(address string) bool {
 
 func GetBalanceHandler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	// Get the Ethereum address from the path parameter
-	address := request.PathParameters["address"]
-
+	address := strings.TrimPrefix(request.Path, "/.netlify/functions/balance/")
 	// Check if the address is valid
 	if !isValidAddress(address) {
 		response := struct {
