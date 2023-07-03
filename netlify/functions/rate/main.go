@@ -380,7 +380,7 @@ func HandleRequest(request events.APIGatewayProxyRequest) (events.APIGatewayProx
 			Headers:    map[string]string{"Content-Type": "application/json"},
 			Body:       string(responseBody),
 		}, nil
-	} else {
+	} else if len(splitPath) == 4 {
 		// GET /rates
 		db, err := NewDatabase()
 		if err != nil {
@@ -400,6 +400,14 @@ func HandleRequest(request events.APIGatewayProxyRequest) (events.APIGatewayProx
 			StatusCode: http.StatusOK,
 			Headers:    map[string]string{"Content-Type": "application/json"},
 			Body:       string(responseBody),
+		}, nil
+	} else {
+		errorMessage := "Invalid parameters. Please try again with valid parameters.\n\nValid URL formats:\n1. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate\n2. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/{crypto}\n3. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/{crypto}/{fiat}\n4. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/history/{crypto}/{fiat}\n\nValid cryptocurrencies: BTC, ETH, USDT, BNB, USDC, XRP, ADA, DOGE, LTC, SOL\nValid fiat currencies: CNY, USD, EUR, JPY, GBP, KRW, INR, CAD, HKD, BRL"
+
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusBadRequest,
+			Headers:    map[string]string{"Content-Type": "text/plain"},
+			Body:       errorMessage,
 		}, nil
 	}
 }
