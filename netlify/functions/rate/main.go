@@ -188,7 +188,232 @@ func (d *Database) GetHistoricalExchangeRates(crypto, fiat string) ([]CryptoResp
 	return rates, nil
 }
 
+func handleTooManyInvalidParameters() events.APIGatewayProxyResponse {
+	errorMessage := "Too many parameters. Please try again with valid parameters.\n\nValid URL formats:\n1. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate\n2. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/{crypto}\n3. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/{crypto}/{fiat}\n4. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/history/{crypto}/{fiat}\n\nValid cryptocurrencies: BTC, ETH, USDT, BNB, USDC, XRP, ADA, DOGE, LTC, SOL\nValid fiat currencies: CNY, USD, EUR, JPY, GBP, KRW, INR, CAD, HKD, BRL"
+
+	return events.APIGatewayProxyResponse{
+		StatusCode: http.StatusBadRequest,
+		Headers:    map[string]string{"Content-Type": "text/plain"},
+		Body:       errorMessage,
+	}
+}
+
+func handleInvalidParameters() events.APIGatewayProxyResponse {
+	errorMessage := "Invalid parameters. Please try again with valid parameters.\n\nValid URL formats:\n1. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate\n2. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/{crypto}\n3. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/{crypto}/{fiat}\n4. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/history/{crypto}/{fiat}\n\nValid cryptocurrencies: BTC, ETH, USDT, BNB, USDC, XRP, ADA, DOGE, LTC, SOL\nValid fiat currencies: CNY, USD, EUR, JPY, GBP, KRW, INR, CAD, HKD, BRL"
+
+	return events.APIGatewayProxyResponse{
+		StatusCode: http.StatusBadRequest,
+		Headers:    map[string]string{"Content-Type": "text/plain"},
+		Body:       errorMessage,
+	}
+}
+
+func handleInvalidCryptoCurrency() events.APIGatewayProxyResponse {
+	errorMessage := "Crypto currency does not exist or is not servicable. \nPlease try again with valid parameters.\n\nValid URL formats:\n1. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate\n2. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/{crypto}\n3. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/{crypto}/{fiat}\n4. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/history/{crypto}/{fiat}\n\nValid cryptocurrencies: BTC, ETH, USDT, BNB, USDC, XRP, ADA, DOGE, LTC, SOL\nValid fiat currencies: CNY, USD, EUR, JPY, GBP, KRW, INR, CAD, HKD, BRL"
+
+	return events.APIGatewayProxyResponse{
+		StatusCode: http.StatusBadRequest,
+		Headers:    map[string]string{"Content-Type": "text/plain"},
+		Body:       errorMessage,
+	}
+}
+
+func handleInvalidFiatCurrency() events.APIGatewayProxyResponse {
+	errorMessage := "Fiat currency does not exist or is not servicable. \nPlease try again with valid parameters.\n\nValid URL formats:\n1. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate\n2. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/{crypto}\n3. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/{crypto}/{fiat}\n4. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/history/{crypto}/{fiat}\n\nValid cryptocurrencies: BTC, ETH, USDT, BNB, USDC, XRP, ADA, DOGE, LTC, SOL\nValid fiat currencies: CNY, USD, EUR, JPY, GBP, KRW, INR, CAD, HKD, BRL"
+
+	return events.APIGatewayProxyResponse{
+		StatusCode: http.StatusBadRequest,
+		Headers:    map[string]string{"Content-Type": "text/plain"},
+		Body:       errorMessage,
+	}
+}
+
+func handleExchangeRateNotFound() events.APIGatewayProxyResponse {
+	errorMessage := "Exchange rates not found."
+
+	return events.APIGatewayProxyResponse{
+		StatusCode: http.StatusNotFound,
+		Headers:    map[string]string{"Content-Type": "text/plain"},
+		Body:       errorMessage,
+	}
+
+}
+
+func handleGetExchangeRate(splitPath []string) (events.APIGatewayProxyResponse, error) {
+	crypto := splitPath[4]
+	fiat := splitPath[5]
+
+	db, err := NewDatabase()
+	if err != nil {
+		log.Println("Error connecting to the database:", err)
+		return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
+	}
+	defer db.Close()
+	cryptoExists, err := db.CheckCryptoCurrency(crypto)
+	if err != nil {
+		log.Println("Error checking if crypto currency exists:", err)
+		return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
+	}
+	if !cryptoExists {
+		return handleInvalidCryptoCurrency(), nil
+	}
+	fiatExists, err := db.CheckFiatCurrency(fiat)
+	if err != nil {
+		log.Println("Error checking if fiat currency exists:", err)
+		return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
+	}
+	if !fiatExists {
+		return handleInvalidFiatCurrency(), nil
+	}
+
+	rate, err := db.GetExchangeRate(crypto, fiat)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return handleExchangeRateNotFound(), nil
+		}
+		log.Println("Error retrieving exchange rate:", err)
+		return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
+	}
+
+	response := CryptoResponse{Value: rate}
+	responseBody, _ := json.Marshal(response)
+	return events.APIGatewayProxyResponse{
+		StatusCode: http.StatusOK,
+		Headers:    map[string]string{"Content-Type": "application/json"},
+		Body:       string(responseBody),
+	}, nil
+}
+
+func handleGetExchangeRatesForCrypto(splitPath []string) (events.APIGatewayProxyResponse, error) {
+	crypto := splitPath[4]
+
+	db, err := NewDatabase()
+	if err != nil {
+		log.Println("Error connecting to the database:", err)
+		return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
+	}
+	defer db.Close()
+	cryptoExists, err := db.CheckCryptoCurrency(crypto)
+	if err != nil {
+		log.Println("Error checking if crypto currency exists:", err)
+		return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
+	}
+	if !cryptoExists {
+		return handleInvalidCryptoCurrency(), nil
+	}
+
+	rates, err := db.GetExchangeRatesForCrypto(crypto)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return handleExchangeRateNotFound(), nil
+		}
+		log.Println("Error retrieving exchange rates:", err)
+		return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
+	}
+
+	response := make(map[string]float64)
+	for fiat, rate := range rates {
+		response[fiat] = rate
+	}
+
+	responseBody, _ := json.Marshal(response)
+	return events.APIGatewayProxyResponse{
+		StatusCode: http.StatusOK,
+		Headers:    map[string]string{"Content-Type": "application/json"},
+		Body:       string(responseBody),
+	}, nil
+}
+
+func handleGetHistoricalExchangeRates(splitPath []string) (events.APIGatewayProxyResponse, error) {
+	crypto := splitPath[5]
+	fiat := splitPath[6]
+
+	db, err := NewDatabase()
+	if err != nil {
+		log.Println("Error connecting to the database:", err)
+		return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
+	}
+	defer db.Close()
+	cryptoExists, err := db.CheckCryptoCurrency(crypto)
+	if err != nil {
+		log.Println("Error checking if crypto currency exists:", err)
+		return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
+	}
+	if !cryptoExists {
+		return handleInvalidCryptoCurrency(), nil
+	}
+	fiatExists, err := db.CheckFiatCurrency(fiat)
+	if err != nil {
+		log.Println("Error checking if fiat currency exists:", err)
+		return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
+	}
+	if !fiatExists {
+		return handleInvalidFiatCurrency(), nil
+	}
+
+	rates, err := db.GetHistoricalExchangeRates(crypto, fiat)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return handleExchangeRateNotFound(), nil
+		}
+		log.Println("Error retrieving historical exchange rates:", err)
+		return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
+	}
+
+	response := HistoricalRateResponse{ExchangeRate: rates}
+	responseBody, _ := json.Marshal(response)
+	return events.APIGatewayProxyResponse{
+		StatusCode: http.StatusOK,
+		Headers:    map[string]string{"Content-Type": "application/json"},
+		Body:       string(responseBody),
+	}, nil
+}
+
+func handleGetAllExchangeRates() (events.APIGatewayProxyResponse, error) {
+	db, err := NewDatabase()
+	if err != nil {
+		log.Println("Error connecting to the database:", err)
+		return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
+	}
+	defer db.Close()
+
+	rates, err := db.GetAllExchangeRates()
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return handleExchangeRateNotFound(), nil
+		}
+		log.Println("Error retrieving exchange rates:", err)
+		return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
+	}
+
+	responseBody, _ := json.Marshal(rates)
+	return events.APIGatewayProxyResponse{
+		StatusCode: http.StatusOK,
+		Headers:    map[string]string{"Content-Type": "application/json"},
+		Body:       string(responseBody),
+	}, nil
+}
+
 func HandleRequest(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	splitPath := strings.Split(request.Path, "/")
+	numParams := len(splitPath)
+
+	if numParams > 7 {
+		return handleTooManyInvalidParameters(), nil
+	} else if numParams == 6 {
+		return handleGetExchangeRate(splitPath)
+	} else if numParams == 5 && splitPath[4] != "" {
+		return handleGetExchangeRatesForCrypto(splitPath)
+	} else if numParams == 7 && splitPath[4] == "history" && splitPath[5] != "" && splitPath[6] != "" {
+		return handleGetHistoricalExchangeRates(splitPath)
+	} else if numParams == 4 {
+		return handleGetAllExchangeRates()
+	} else {
+		return handleInvalidParameters(), nil
+	}
+}
+
+/*func HandleRequest(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	splitPath := strings.Split(request.Path, "/")
 
 	if len(splitPath) > 7 {
@@ -410,7 +635,7 @@ func HandleRequest(request events.APIGatewayProxyRequest) (events.APIGatewayProx
 			Body:       errorMessage,
 		}, nil
 	}
-}
+}*/
 
 func main() {
 	lambda.Start(HandleRequest)
