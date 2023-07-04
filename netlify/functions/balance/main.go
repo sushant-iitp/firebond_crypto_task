@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"math"
+	"math/big"
 	"net/http"
 	"regexp"
 	"strings"
@@ -19,6 +21,15 @@ func isValidAddress(address string) bool {
 	// This is a simple check and may not catch all invalid addresses, but it covers most cases
 	match, _ := regexp.MatchString("^0x[0-9a-fA-F]{40}$", address)
 	return match
+}
+
+// Helper function to convert balance from Wei to Ether
+func weiToEther(balance *big.Int) float64 {
+	etherValue := new(big.Float)
+	etherValue.SetString(balance.String())
+	etherValue = etherValue.Quo(etherValue, big.NewFloat(math.Pow10(18)))
+	ether, _ := etherValue.Float64()
+	return ether
 }
 
 func GetBalanceHandler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
@@ -59,11 +70,11 @@ func GetBalanceHandler(ctx context.Context, request events.APIGatewayProxyReques
 
 	// Prepare the response payload
 	response := struct {
-		Address string `json:"address"`
-		Balance string `json:"balance"`
+		Address string  `json:"address"`
+		Balance float64 `json:"balance"`
 	}{
 		Address: address,
-		Balance: balance.String(),
+		Balance: weiToEther(balance),
 	}
 
 	// Encode the response payload as JSON
