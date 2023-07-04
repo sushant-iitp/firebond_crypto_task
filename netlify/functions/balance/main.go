@@ -59,11 +59,11 @@ func GetBalanceHandler(ctx context.Context, request events.APIGatewayProxyReques
 
 	// Prepare the response payload
 	response := struct {
-		Address string `json:"address"`
-		Balance string `json:"balance"`
+		Address string  `json:"address"`
+		Balance float64 `json:"balance"`
 	}{
 		Address: address,
-		Balance: balance.String(),
+		Balance: balance,
 	}
 
 	// Encode the response payload as JSON
