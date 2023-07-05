@@ -73,7 +73,8 @@ Limitations:
 
 ## Testing
 
-To test the APIs of the CryptoData service, you can use the POSTMAN Collection provided in the repository. Import the collection into POSTMAN and execute the requests to validate the functionality and responses of the service.
+To test the APIs of the CryptoData service, you can use the POSTMAN Collection provided in the repository. 
+Import the collection into POSTMAN and execute the requests to validate the functionality and responses of the service.
 
 ## Local Setup
 
@@ -98,3 +99,4 @@ The CryptoData service can also be deployed locally using the files present in t
 ## Unit Testing
 
 Unit testing of functions can be executed from the `unit_test.go` file after filling in the mock database credentials in the `setup()` and `tearDown()` functions.
+Execute the different Unit Tests individually one at a time ot maintain Database Consistency
