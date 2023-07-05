@@ -4,10 +4,10 @@ def insert_fiat_currencies(currencies):
     try:
         conn = mysql.connector.connect(
             password = "",
-    database = "",
-    host = "",
-    port = ,
-    user = ""
+            database = "",
+            host = "",
+            port = ,
+            user = ""
         )
         cursor = conn.cursor()
 
