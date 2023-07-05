@@ -1,0 +1,571 @@
+{
+	"info": {
+		"_postman_id": "53f372b9-54e5-4d2b-a973-939b9bf09777",
+		"name": "Crypto_POSTMAN_Collection",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "28313105"
+	},
+	"item": [
+		{
+			"name": "Crypto-Fiat Request",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Parse the response body",
+							"var jsonData = pm.response.json();",
+							"",
+							"// Define the expected response structure",
+							"var responseSchema = {",
+							"  \"type\": \"object\",",
+							"  \"properties\": {",
+							"    \"value\": { \"type\": \"number\" }",
+							"  },",
+							"  \"required\": [\"value\"]",
+							"};",
+							"",
+							"// Validate the response structure",
+							"pm.test(\"Response has valid structure\", function() {",
+							"  pm.expect(jsonData).to.have.property(\"value\");",
+							"});",
+							"",
+							"// Validate the response against the schema",
+							"pm.test(\"Response matches the schema\", function() {",
+							"  pm.expect(jsonData).to.be.jsonSchema(responseSchema);",
+							"});",
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{url}}/rates/BTC/USD",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"rates",
+						"BTC",
+						"USD"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Wrong CryptoName Request",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Get the response body as text",
+							"var responseBody = pm.response.text();",
+							"",
+							"// Define the expected response text",
+							"var expectedResponseText = `Crypto currency does not exist or is not servicable. \\nPlease try again with valid parameters.\\n\\nValid URL formats:\\n1. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate\\n2. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/{crypto}\\n3. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/{crypto}/{fiat}\\n4. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/history/{crypto}/{fiat}\\n\\nValid cryptocurrencies: BTC, ETH, USDT, BNB, USDC, XRP, ADA, DOGE, LTC, SOL\\nValid fiat currencies: CNY, USD, EUR, JPY, GBP, KRW, INR, CAD, HKD, BRL`;",
+							"",
+							"// Validate the response text",
+							"pm.test(\"Response text is correct\", function() {",
+							"    pm.expect(responseBody).to.eql(expectedResponseText);",
+							"});",
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{url}}/rates/BTR/USD",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"rates",
+						"BTR",
+						"USD"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Wrong Fiat Currency Request",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Get the response body as text",
+							"var responseBody = pm.response.text();",
+							"",
+							"// Define the expected response text",
+							"var expectedResponseText = `Fiat currency does not exist or is not servicable. \\nPlease try again with valid parameters.\\n\\nValid URL formats:\\n1. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate\\n2. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/{crypto}\\n3. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/{crypto}/{fiat}\\n4. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/history/{crypto}/{fiat}\\n\\nValid cryptocurrencies: BTC, ETH, USDT, BNB, USDC, XRP, ADA, DOGE, LTC, SOL\\nValid fiat currencies: CNY, USD, EUR, JPY, GBP, KRW, INR, CAD, HKD, BRL`;",
+							"",
+							"// Validate the response text",
+							"pm.test(\"Response text is correct\", function() {",
+							"    pm.expect(responseBody).to.eql(expectedResponseText);",
+							"});",
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{url}}/rates/BTC/inrt",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"rates",
+						"BTC",
+						"inrt"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Crypto Request",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Parse the response body",
+							"var jsonData = pm.response.json();",
+							"",
+							"// Define the expected response structure",
+							"var responseSchema = {",
+							"  \"type\": \"object\",",
+							"  \"properties\": {",
+							"    \"BRL\": { \"type\": \"number\" },",
+							"    \"CAD\": { \"type\": \"number\" },",
+							"    \"CNY\": { \"type\": \"number\" },",
+							"    \"EUR\": { \"type\": \"number\" },",
+							"    \"GBP\": { \"type\": \"number\" },",
+							"    \"HKD\": { \"type\": \"number\" },",
+							"    \"INR\": { \"type\": \"number\" },",
+							"    \"JPY\": { \"type\": \"number\" },",
+							"    \"KRW\": { \"type\": \"number\" },",
+							"    \"USD\": { \"type\": \"number\" }",
+							"  },",
+							"  \"required\": [\"BRL\", \"CAD\", \"CNY\", \"EUR\", \"GBP\", \"HKD\", \"INR\", \"JPY\", \"KRW\", \"USD\"]",
+							"};",
+							"",
+							"",
+							"",
+							"// Validate the response against the schema",
+							"pm.test(\"Response matches the schema\", function() {",
+							"  pm.expect(jsonData).to.be.jsonSchema(responseSchema);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{url}}/rates/ETH",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"rates",
+						"ETH"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Wrong Crypto Request",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Get the response body as text",
+							"var responseBody = pm.response.text();",
+							"",
+							"// Define the expected response text",
+							"var expectedResponseText = `Crypto currency does not exist or is not servicable. \\nPlease try again with valid parameters.\\n\\nValid URL formats:\\n1. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate\\n2. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/{crypto}\\n3. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/{crypto}/{fiat}\\n4. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/history/{crypto}/{fiat}\\n\\nValid cryptocurrencies: BTC, ETH, USDT, BNB, USDC, XRP, ADA, DOGE, LTC, SOL\\nValid fiat currencies: CNY, USD, EUR, JPY, GBP, KRW, INR, CAD, HKD, BRL`;",
+							"",
+							"// Validate the response text",
+							"pm.test(\"Response text is correct\", function() {",
+							"    pm.expect(responseBody).to.eql(expectedResponseText);",
+							"});",
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{url}}/rates/bhs",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"rates",
+						"bhs"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "ALL Pair Request",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Parse the response body",
+							"var jsonData = pm.response.json();",
+							"",
+							"// Define the expected response structure",
+							"var responseSchema = {",
+							"  \"type\": \"object\",",
+							"  \"additionalProperties\": {",
+							"    \"type\": \"object\",",
+							"    \"properties\": {",
+							"      \"BRL\": { \"type\": \"number\" },",
+							"      \"CAD\": { \"type\": \"number\" },",
+							"      \"CNY\": { \"type\": \"number\" },",
+							"      \"EUR\": { \"type\": \"number\" },",
+							"      \"GBP\": { \"type\": \"number\" },",
+							"      \"HKD\": { \"type\": \"number\" },",
+							"      \"INR\": { \"type\": \"number\" },",
+							"      \"JPY\": { \"type\": \"number\" },",
+							"      \"KRW\": { \"type\": \"number\" },",
+							"      \"USD\": { \"type\": \"number\" }",
+							"    },",
+							"    \"required\": [\"BRL\", \"CAD\", \"CNY\", \"EUR\", \"GBP\", \"HKD\", \"INR\", \"JPY\", \"KRW\", \"USD\"]",
+							"  }",
+							"};",
+							"",
+							"",
+							"",
+							"// Validate the response against the schema",
+							"pm.test(\"Response matches the schema\", function() {",
+							"  pm.expect(jsonData).to.be.jsonSchema(responseSchema);",
+							"});",
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{url}}/rates",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"rates"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "HistoricalData Request",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Parse the response body",
+							"var jsonData = pm.response.json();",
+							"",
+							"// Define the expected response structure",
+							"var responseSchema = {",
+							"  \"type\": \"object\",",
+							"  \"properties\": {",
+							"    \"exchange_rate\": {",
+							"      \"type\": \"array\",",
+							"      \"items\": {",
+							"        \"type\": \"object\",",
+							"        \"properties\": {",
+							"          \"value\": { \"type\": \"number\" },",
+							"          \"timestamp\": { \"type\": \"string\", \"format\": \"date-time\" }",
+							"        },",
+							"        \"required\": [\"value\", \"timestamp\"]",
+							"      }",
+							"    }",
+							"  },",
+							"  \"required\": [\"exchange_rate\"]",
+							"};",
+							"",
+							"",
+							"",
+							"// Validate the response against the schema",
+							"pm.test(\"Response matches the schema\", function() {",
+							"  pm.expect(jsonData).to.be.jsonSchema(responseSchema);",
+							"});",
+							"",
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{url}}/rates/history/BTC/INR",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"rates",
+						"history",
+						"BTC",
+						"INR"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Invalid parameter Request",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Get the response body as text",
+							"var responseBody = pm.response.text();",
+							"",
+							"// Define the expected response text",
+							"var expectedResponseText = `Invalid parameters. Please try again with valid parameters.\\n\\nValid URL formats:\\n1. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate\\n2. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/{crypto}\\n3. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/{crypto}/{fiat}\\n4. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/history/{crypto}/{fiat}\\n\\nValid cryptocurrencies: BTC, ETH, USDT, BNB, USDC, XRP, ADA, DOGE, LTC, SOL\\nValid fiat currencies: CNY, USD, EUR, JPY, GBP, KRW, INR, CAD, HKD, BRL`;",
+							"",
+							"// Validate the response text",
+							"pm.test(\"Response text is correct\", function() {",
+							"    pm.expect(responseBody).to.eql(expectedResponseText);",
+							"});",
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{url}}/rates/histry/ETH/USD",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"rates",
+						"histry",
+						"ETH",
+						"USD"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Too many Parameters Request",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Get the response body as text",
+							"var responseBody = pm.response.text();",
+							"",
+							"// Define the expected response text",
+							"var expectedResponseText = `Too many parameters. Please try again with valid parameters.\\n\\nValid URL formats:\\n1. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate\\n2. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/{crypto}\\n3. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/{crypto}/{fiat}\\n4. https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions/rate/history/{crypto}/{fiat}\\n\\nValid cryptocurrencies: BTC, ETH, USDT, BNB, USDC, XRP, ADA, DOGE, LTC, SOL\\nValid fiat currencies: CNY, USD, EUR, JPY, GBP, KRW, INR, CAD, HKD, BRL`;",
+							"",
+							"// Validate the response text",
+							"pm.test(\"Response text is correct\", function() {",
+							"    pm.expect(responseBody).to.eql(expectedResponseText);",
+							"});",
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{url}}/rates/history/BTC/USD/random",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"rates",
+						"history",
+						"BTC",
+						"USD",
+						"random"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Ethereum Balance Request",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Parse the response body",
+							"var jsonData = pm.response.json();",
+							"",
+							"// Define the expected response structure",
+							"var responseSchema = {",
+							"  \"type\": \"object\",",
+							"  \"properties\": {",
+							"    \"address\": { \"type\": \"string\" },",
+							"    \"balance\": { \"type\": \"number\" }",
+							"  },",
+							"  \"required\": [\"address\", \"balance\"]",
+							"};",
+							"",
+							"// Validate the response structure",
+							"pm.test(\"Response has valid structure\", function() {",
+							"  pm.expect(jsonData).to.have.property(\"address\");",
+							"  pm.expect(jsonData).to.have.property(\"balance\");",
+							"});",
+							"",
+							"// Validate the response against the schema",
+							"pm.test(\"Response matches the schema\", function() {",
+							"  pm.expect(jsonData).to.be.jsonSchema(responseSchema);",
+							"});",
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{url}}/balance/0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"balance",
+						"0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Ethereum Incorrect Address  Request",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Parse the response body",
+							"var jsonData = pm.response.json();",
+							"",
+							"// Define the expected response structure",
+							"var responseSchema = {",
+							"    \"type\": \"object\",",
+							"    \"properties\": {",
+							"        \"message\": { \"type\": \"string\" }",
+							"    },",
+							"    \"required\": [\"message\"]",
+							"};",
+							"",
+							"// Validate the response structure",
+							"pm.test(\"Response has valid structure\", function() {",
+							"    pm.expect(jsonData).to.have.property(\"message\");",
+							"});",
+							"",
+							"// Validate the response against the schema",
+							"pm.test(\"Response matches the schema\", function() {",
+							"    pm.expect(jsonData).to.be.jsonSchema(responseSchema);",
+							"});",
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{url}}/balance/0x742d35Cc6634Csgsdger844Bc454e4438f44e",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"balance",
+						"0x742d35Cc6634Csgsdger844Bc454e4438f44e"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "url",
+			"value": "https://main--euphonious-brioche-40b22d.netlify.app/.netlify/functions",
+			"type": "string"
+		}
+	]
+}
