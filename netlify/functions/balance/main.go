@@ -7,6 +7,7 @@ import (
 	"math"
 	"math/big"
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 
@@ -52,7 +53,11 @@ func GetBalanceHandler(ctx context.Context, request events.APIGatewayProxyReques
 	}
 
 	// Create an Ethereum client connection
-	client, err := ethclient.Dial("https://mainnet.infura.io/v3/ca40b363703a4b3a8fed56a7eedd774a")
+	infuraURL := os.Getenv("INFURA_URL")
+	if infuraURL == "" {
+		log.Fatal("INFURA_URL environment variable is not set")
+	}
+	client, err := ethclient.Dial(infuraURL)
 	if err != nil {
 		log.Println("Failed to connect to the Ethereum client:", err)
 		return events.APIGatewayProxyResponse{StatusCode: http.StatusInternalServerError}, err
