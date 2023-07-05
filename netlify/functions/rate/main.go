@@ -79,11 +79,17 @@ func (d *Database) Close() error {
 
 func (d *Database) GetExchangeRate(crypto, fiat string) (float64, error) {
 	query := `
-		SELECT rate
-		FROM ExchangeRates er
-		JOIN Cryptocurrencies c ON c.cryptocurrency_id = er.cryptocurrency_id
-		JOIN FiatCurrencies f ON f.fiat_currency_id = er.fiat_currency_id
-		WHERE c.symbol = ? AND f.symbol = ?
+	SELECT rate
+	FROM ExchangeRates er
+	JOIN Cryptocurrencies c ON c.cryptocurrency_id = er.cryptocurrency_id
+	JOIN FiatCurrencies f ON f.fiat_currency_id = er.fiat_currency_id
+	WHERE c.symbol = ? AND f.symbol = ?
+	AND er.timestamp = (
+		SELECT MAX(timestamp)
+		FROM ExchangeRates
+		WHERE cryptocurrency_id = er.cryptocurrency_id
+		AND fiat_currency_id = er.fiat_currency_id
+	)
 	`
 
 	row := d.DB.QueryRow(query, crypto, fiat)
